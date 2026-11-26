@@ -32,7 +32,7 @@ O pedido de permissão é regra do host, não do módulo: a ferramenta pede a pe
 | `src/modules/monitor/internal/` | Núcleo privado: registro dos monitores, limpeza das linhas, redação de segredos, filtro, agrupamento, detecção de inundação, texto dos avisos e entrega em ordem |
 | `src/modules/monitor/adapters/` | Adaptadores privados: execução do comando num grupo de processos e leitura da saída |
 | `src/modules/monitor/tests/` | Testes isolados do módulo e substitutos de suas portas |
-| `src/integration/opencode/` | Ferramentas, esquemas de entrada, permissão e entrega pelo `@opencode/plugin` |
+| `src/integration/opencode/` | Ferramentas, esquemas de entrada, separação do comando em subcomandos para a permissão de shell, e entrega pelo `@opencode/plugin` |
 | `src/composition/` | Montagem, injeção do adaptador de entrega e encerramento |
 | `src/entry.ts` | Entrada do pacote (`exports["."]`): declara o plugin com `Plugin.define` e aciona a composição |
 | `tests/integration/` | Verificação do plugin montado contra um host substituto |

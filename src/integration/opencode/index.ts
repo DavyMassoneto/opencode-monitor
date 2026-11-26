@@ -1,3 +1,4 @@
+export * from "./command-splitting"
 export * from "./constants"
 export * from "./register-tools"
 export * from "./schemas"

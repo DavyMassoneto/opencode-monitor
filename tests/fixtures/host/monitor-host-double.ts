@@ -20,6 +20,7 @@ export class MonitorHostDouble implements MonitorHost {
   readonly permissionRequests: PermissionRequest[] = []
   readonly messages: SyntheticMessage[] = []
   denyPermission = false
+  readonly deniedResources: RegExp[] = []
 
   readonly tool: MonitorToolHost = {
     transform: async (callback: ToolTransformCallback) => {
@@ -32,7 +33,8 @@ export class MonitorHostDouble implements MonitorHost {
     assert: async (request: PermissionRequest) => {
       Schema.decodeUnknownSync(AssertInput)(request)
       this.permissionRequests.push(request)
-      if (this.denyPermission) {
+      const isDenied = request.resources.some((resource) => this.deniedResources.some((rule) => rule.test(resource)))
+      if (this.denyPermission || isDenied) {
         throw new Error(PERMISSION_DENIED_TEXT)
       }
     },

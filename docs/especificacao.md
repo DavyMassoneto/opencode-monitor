@@ -215,6 +215,15 @@ await ctx.permission.assert({
 Erros de `assert` devem **propagar** (não virar texto de retorno), como a doc pede.
 Se `cwd` estiver fora do projeto, também verificar `external_directory`.
 
+O scanner de shell do OpenCode, que separa comandos compostos, não é exposto aos plugins. Checar o comando inteiro como um recurso só deixaria `echo ok; rm -rf x` passar por uma regra `deny` para `rm *`. Por isso o plugin separa o comando antes de pedir permissão:
+
+- quebra em `;`, `&&`, `||`, `|`, `|&`, `&` e quebras de linha, respeitando aspas e escapes, sem confundir redirecionamentos (`2>&1`, `&>`) com separadores;
+- extrai os comandos de `$( )`, crases e `<( )`/`>( )`, também dentro de aspas duplas;
+- remove agrupamentos (`( )`, `{ }`), palavras reservadas (`if`, `then`, `do`...), atribuições (`FOO=1`) e prefixos (`nohup`, `exec`, `time`, `command`);
+- pede `shell` com cada subcomando como recurso, e salva os mesmos subcomandos em "permitir sempre".
+
+Quando o comando não pode ser analisado (aspas sem fechamento, heredoc, parênteses desbalanceados, `eval`, `source`, `sh -c`), faz como o OpenCode: pede `shell` para o comando inteiro e `external_directory` para `*`, sem salvar padrão. A separação é de melhor esforço; ela não enxerga comandos executados indiretamente por outro programa (`xargs rm`, `find -exec`).
+
 ### 9.2 Nada controlado pelo modelo vira caminho
 - IDs gerados pelo plugin (`m_` + aleatório), nunca derivados do texto do modelo.
 - Arquivos ficam em `<stateRoot>/<sessionID>/<monitorId>.{stderr.log}` — `sessionID` validado contra o formato de ID.

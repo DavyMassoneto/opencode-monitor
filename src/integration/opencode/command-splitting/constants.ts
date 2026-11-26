@@ -1,0 +1,30 @@
+export const ANALYZED_KIND = "analyzed"
+export const OPAQUE_KIND = "opaque"
+export const NO_TERMINATOR = ""
+export const SUBSTITUTION_END = ")"
+export const BACKTICK = "`"
+export const BACKSLASH = "\\"
+export const SINGLE_QUOTE = "'"
+export const DOUBLE_QUOTE = '"'
+export const GROUP_OPEN = "("
+export const GROUP_CLOSE = ")"
+export const COMMENT_START = "#"
+export const NEWLINE = "\n"
+export const SUBSTITUTION_OPENERS: readonly string[] = ["$(", "<(", ">("]
+export const DOLLAR_SUBSTITUTION = "$("
+export const ARITHMETIC_OPENER = "$(("
+export const HEREDOC_OPENER = "<<"
+export const HERESTRING_OPENER = "<<<"
+export const TWO_CHARACTER_SEPARATORS: readonly string[] = ["&&", "||", "|&"]
+export const ONE_CHARACTER_SEPARATORS: readonly string[] = [";", "\n", "&", "|"]
+export const REDIRECTION_CHARACTERS: readonly string[] = ["<", ">"]
+export const REDIRECTABLE_SEPARATORS: readonly string[] = ["&", "|"]
+export const AMPERSAND = "&"
+export const GREATER_THAN = ">"
+export const NOT_FOUND = -1
+export const WHITESPACE = /\s/
+export const LEADING_PREFIX =
+  /^(?:(?:if|then|else|elif|do|while|until|time|exec|command|builtin|nohup|!|\{|\})(?=\s|$)|[A-Za-z_]\w*=(?:'[^']*'|"(?:\\.|[^"\\])*"|[^\s'"])*(?=\s|$))/
+export const CLOSING_KEYWORD = /^(?:fi|done|esac|\})$/
+export const DYNAMIC_COMMAND =
+  /^(?:eval|source|\.)(?:\s|$)|^(?:\S*\/)?(?:sh|bash|zsh|dash|ksh)\s+(?:-\S+\s+)*-\w*c\w*(?:\s|$)/
