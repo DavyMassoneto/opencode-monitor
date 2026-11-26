@@ -9,3 +9,5 @@ export const PROBE_SIGNAL = 0
 export const TEST_NOTICE_ID_PREFIX = "msg_test_"
 export const OTHER_SESSION_ID = "ses_other_test"
 export const DELIVERY_REJECTION = "Expected a string starting with msg_"
+export const TERM_IGNORING_GROUP = "trap '' TERM; echo armed; sleep 30"
+export const SESSION_LIMIT = 10

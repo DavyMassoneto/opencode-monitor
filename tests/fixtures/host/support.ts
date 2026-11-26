@@ -15,7 +15,7 @@ import {
 } from "./constants"
 import { type MonitorHostDouble } from "./monitor-host-double"
 import { STARTED_TOOL_RESULT } from "./schemas"
-import { type RegisteredTool, type ToolCallContext } from "./types"
+import { type RegisteredTool, type StartedToolResult, type ToolCallContext } from "./types"
 
 export function toolCallContext(): ToolCallContext {
   return {
@@ -37,13 +37,17 @@ export function registeredTool(host: MonitorHostDouble, name: string): Registere
   return tool
 }
 
-export async function startToolPid(host: MonitorHostDouble, command: string): Promise<number> {
+export async function startTool(host: MonitorHostDouble, command: string): Promise<StartedToolResult> {
   const result = await registeredTool(host, MONITOR_START_TOOL).execute(
     { command, description: HOST_DESCRIPTION },
     toolCallContext(),
   )
 
-  return Schema.decodeUnknownSync(STARTED_TOOL_RESULT)(result.content).pid
+  return Schema.decodeUnknownSync(STARTED_TOOL_RESULT)(result.content)
+}
+
+export async function startToolPid(host: MonitorHostDouble, command: string): Promise<number> {
+  return (await startTool(host, command)).pid
 }
 
 export function isGroupAlive(pid: number): boolean {

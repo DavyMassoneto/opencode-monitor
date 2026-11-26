@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest"
 import { DELIVERY_REJECTION, LONG_RUNNING_GROUP, OTHER_SESSION_ID, TEST_SESSION_ID } from "./constants"
-import { makeMonitorSut, startedPid } from "./support"
+import { makeMonitorSut, monitorRequest, startedPid } from "./support"
 
 function listRunningMonitor(): void {
   const sut = makeMonitorSut()
@@ -35,6 +35,17 @@ async function recordDeliveryFailure(): Promise<void> {
   sut.monitors.stopAll()
 }
 
+async function countLines(): Promise<void> {
+  const sut = makeMonitorSut()
+
+  sut.monitors.start({ ...monitorRequest(`echo skip; echo ERROR one; ${LONG_RUNNING_GROUP}`), pattern: /ERROR/ })
+  await vi.waitFor(() => expect(sut.sink.notices).toHaveLength(1))
+  await vi.waitFor(() =>
+    expect(sut.monitors.list(TEST_SESSION_ID)[0]?.lines).toEqual({ received: 2, delivered: 1, last: "ERROR one" }),
+  )
+  sut.monitors.stopAll()
+}
+
 async function dropFinishedMonitor(): Promise<void> {
   const sut = makeMonitorSut()
 
@@ -47,6 +58,7 @@ function registerTests(): void {
   test("lista o monitor ativo com entrega saudável", listRunningMonitor)
   test("não lista monitores de outra sessão", hideOtherSessions)
   test("registra no monitor a falha de entrega do aviso", recordDeliveryFailure)
+  test("conta linhas recebidas e entregues e guarda a última", countLines)
   test("tira da lista o monitor cujo comando terminou", dropFinishedMonitor)
 }
 

@@ -2,6 +2,7 @@ import {
   DELIVERY_FAILED_KIND,
   DELIVERY_HEALTHY_KIND,
   type DeliveryState,
+  type LineCounts,
   type Notice,
 } from "#monitor/modules/monitor/public/contracts"
 import { FloodMeter } from "../flood-detection"
@@ -25,6 +26,7 @@ export class NoticeChannel {
   private accepting = true
   private silenced = false
   private state: DeliveryState = { kind: DELIVERY_HEALTHY_KIND }
+  private readonly counts: LineCounts = { received: 0, delivered: 0 }
 
   constructor(setup: ChannelSetup) {
     this.setup = setup
@@ -34,16 +36,22 @@ export class NoticeChannel {
     return this.state
   }
 
+  get lines(): LineCounts {
+    return { ...this.counts }
+  }
+
   receiveLine(raw: string): void {
     const line = cleanLine(raw)
 
+    this.counts.received += 1
     if (this.accepting && this.isWanted(line)) {
       const now = Date.now()
       if (this.flood.record(now)) {
         this.accepting = false
         this.setup.onFlood()
       } else {
-        this.batch.add(redactSecrets(line), now)
+        this.counts.last = redactSecrets(line)
+        this.batch.add(this.counts.last, now)
         this.schedule(now)
       }
     }
@@ -59,7 +67,7 @@ export class NoticeChannel {
     this.accepting = false
     this.cancelTimer()
     this.flushBatch()
-    this.enqueue([line], 0, `${NOTICE_LABEL_PREFIX}${this.setup.request.description}${labelSuffix}`)
+    this.enqueue([line], 0, `${NOTICE_LABEL_PREFIX}${this.setup.request.description}${labelSuffix}`, 0)
   }
 
   close(): void {
@@ -97,7 +105,7 @@ export class NoticeChannel {
     if (this.batch.hasLines()) {
       const content = this.batch.take()
       const count = content.lines.length + content.omitted
-      this.enqueue(content.lines, content.omitted, this.batchLabel(count))
+      this.enqueue(content.lines, content.omitted, this.batchLabel(count), content.lines.length)
     }
   }
 
@@ -110,13 +118,16 @@ export class NoticeChannel {
     return label
   }
 
-  private enqueue(lines: readonly string[], omitted: number, label: string): void {
+  private enqueue(lines: readonly string[], omitted: number, label: string, outputLines: number): void {
     if (!this.silenced) {
       this.sequence += 1
       const notice = this.notice(lines, omitted, label)
       this.delivering = true
       this.pending = this.pending
         .then(() => this.setup.sink.deliver(notice))
+        .then(() => {
+          this.counts.delivered += outputLines
+        })
         .catch((error: Error) => {
           this.state = { kind: DELIVERY_FAILED_KIND, noticeId: notice.id, reason: error.message }
         })

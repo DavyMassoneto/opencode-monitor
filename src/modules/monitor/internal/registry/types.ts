@@ -15,5 +15,6 @@ export interface RunningMonitor {
   command: LaunchedCommand
   channel: NoticeChannel
   timer: NodeJS.Timeout
+  startedAt: Date
   ending: MonitorEnding
 }

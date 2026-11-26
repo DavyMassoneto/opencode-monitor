@@ -1,9 +1,8 @@
-import { STOP_SIGNAL } from "./constants"
 import { isMissingProcessError } from "./predicates"
 
-export function stopProcessGroup(pid: number): void {
+export function signalProcessGroup(pid: number, signal: NodeJS.Signals): void {
   try {
-    process.kill(-pid, STOP_SIGNAL)
+    process.kill(-pid, signal)
   } catch (error) {
     if (!(error instanceof Error && isMissingProcessError(error))) {
       throw error

@@ -1,4 +1,6 @@
 export const MONITOR_STARTED_KIND = "started"
 export const MONITOR_FAILED_KIND = "failed"
+export const MONITOR_STOPPED_KIND = "stopped"
+export const MONITOR_NOT_FOUND_KIND = "not_found"
 export const DELIVERY_HEALTHY_KIND = "healthy"
 export const DELIVERY_FAILED_KIND = "failed"

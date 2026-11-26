@@ -1,6 +1,6 @@
 import { SessionMessage } from "@opencode/schema/session-message"
 import { type NoticeIdFactory } from "#monitor/modules"
-import { type SyntheticDelivery } from "./types"
+import { type SessionDeletedType, type SyntheticDelivery } from "./types"
 
 export const MONITOR_START_TOOL = "monitor_start"
 export const MONITOR_START_DESCRIPTION = [
@@ -16,3 +16,12 @@ export const PERMISSION_SOURCE_TYPE = "tool"
 export const NOTICE_DELIVERY: SyntheticDelivery = "steer"
 export const MONITOR_RUNNING_STATUS = "running"
 export const CREATE_NOTICE_ID: NoticeIdFactory = SessionMessage.ID.create
+export const MONITOR_LIST_TOOL = "monitor_list"
+export const MONITOR_LIST_DESCRIPTION =
+  "List the running monitors of this session: id, description, command, pid, start time, lines received and delivered, last line and delivery state."
+export const MONITOR_STOP_TOOL = "monitor_stop"
+export const MONITOR_STOP_DESCRIPTION =
+  "Stop a running monitor of this session by id: SIGTERM to its process group, SIGKILL after 3 seconds. Returns its final summary and sends no notice."
+export const MONITOR_NOT_FOUND_TEXT = "no running monitor with this id in this session: "
+export const SESSION_DELETED_EVENT: SessionDeletedType = "session.deleted"
+export const WATCH_FAILURE_TEXT = "[opencode-monitor] session.deleted subscription ended:"

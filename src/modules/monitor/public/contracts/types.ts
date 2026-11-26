@@ -46,16 +46,38 @@ export interface DeliveryFailed {
 
 export type DeliveryState = DeliveryHealthy | DeliveryFailed
 
+export interface LineCounts {
+  received: number
+  delivered: number
+  last?: string
+}
+
 export interface MonitorSummary {
   id: string
   description: string
   command: string
   pid: number
+  startedAt: string
+  lines: LineCounts
   delivery: DeliveryState
 }
+
+export interface MonitorStopped {
+  kind: "stopped"
+  summary: MonitorSummary
+}
+
+export interface MonitorNotFound {
+  kind: "not_found"
+  id: string
+}
+
+export type MonitorStop = MonitorStopped | MonitorNotFound
 
 export interface Monitors {
   start(request: MonitorRequest): MonitorStart
   list(sessionID: string): MonitorSummary[]
+  stop(sessionID: string, id: string): MonitorStop
+  stopSession(sessionID: string): void
   stopAll(): void
 }

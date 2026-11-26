@@ -19,7 +19,7 @@ O OpenCode continua dono das sessões, do histórico, das permissões e da entre
 | Parte | Responsabilidade e estado exclusivos | Contrato na fronteira |
 | --- | --- | --- |
 | Módulo `monitor` | Monitores ativos, processos dos comandos, leitura das linhas, numeração e texto dos avisos, prazo de cada monitor | Recebe o pedido de início com a sessão, o comando, o rótulo e o diretório; devolve o monitor iniciado ou a falha ao iniciar. Exige a porta `NoticeSink`, que entrega um aviso à sessão |
-| Integração `opencode` | Adaptação ao `@opencode/plugin`: definição das ferramentas e dos esquemas de entrada, pedido de permissão de shell, entrega por `session.synthetic` | Recebe o contexto do plugin e a interface do módulo; registra as ferramentas e implementa `NoticeSink` |
+| Integração `opencode` | Adaptação ao `@opencode/plugin`: definição das ferramentas e dos esquemas de entrada, pedido de permissão de shell, entrega por `session.synthetic`, escuta de `session.deleted` | Recebe o contexto do plugin e a interface do módulo; registra as ferramentas, implementa `NoticeSink` e para os monitores das sessões apagadas |
 | Composição | Montagem e encerramento | Recebe o contexto do plugin; devolve a função de limpeza que o OpenCode chama ao descarregar o plugin |
 
 O pedido de permissão é regra do host, não do módulo: a ferramenta pede a permissão de shell antes de chamar o módulo, e o módulo nunca executa um comando sem que isso tenha acontecido.

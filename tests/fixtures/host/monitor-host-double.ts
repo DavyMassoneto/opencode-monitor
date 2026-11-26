@@ -12,6 +12,7 @@ import {
 } from "#monitor/integration"
 import { PERMISSION_DENIED_TEXT } from "./constants"
 import { SYNTHETIC_MESSAGE } from "./schemas"
+import { SessionEventsDouble } from "./session-events-double"
 import { ToolEditorDouble } from "./tool-editor-double"
 
 export class MonitorHostDouble implements MonitorHost {
@@ -46,4 +47,6 @@ export class MonitorHostDouble implements MonitorHost {
   }
 
   readonly location: MonitorLocationHost = { directory: process.cwd() }
+
+  readonly event = new SessionEventsDouble()
 }
