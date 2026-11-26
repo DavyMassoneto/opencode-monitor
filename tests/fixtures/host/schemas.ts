@@ -9,6 +9,7 @@ export const STARTED_SUMMARY = Schema.fromJsonString(
     pid: Schema.Number,
     status: Schema.String,
     startedAt: Schema.String,
+    stderrPath: Schema.String,
     expiresAt: Schema.String.pipe(Schema.optionalKey),
   }),
 )

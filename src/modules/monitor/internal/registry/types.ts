@@ -7,11 +7,13 @@ import {
 import { type CommandLauncher, type LaunchedCommand } from "../command-port"
 import { type DeadlineTimer } from "../deadline"
 import { type NoticeChannel } from "../notice"
+import { type StderrLog, type StderrStore } from "../stderr-port"
 
 export interface RegistryDependencies {
   sink: NoticeSink
   createNoticeId: NoticeIdFactory
   launch: CommandLauncher
+  stderr: StderrStore
 }
 
 export type MonitorEnding = "running" | "flooded" | "expired"
@@ -21,6 +23,7 @@ export interface RunningMonitor {
   request: MonitorRequest
   command: LaunchedCommand
   channel: NoticeChannel
+  log: StderrLog
   startedAt: Date
   ending: MonitorEnding
   expiresAt?: Date

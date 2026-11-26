@@ -1,12 +1,12 @@
 import plugin from "@davy121/opencode-monitor"
 import { Schema } from "effect"
 import { describe, expect, test, vi } from "vitest"
-import { compose, PLUGIN_ID } from "#monitor/composition"
+import { PLUGIN_ID } from "#monitor/composition"
 import { MONITOR_START_INPUT } from "#monitor/integration"
 import {
-  HOST_SESSION_ID,
   MONITOR_START_TOOL,
   MonitorHostDouble,
+  mountPlugin,
   PERMISSION_DENIED_TEXT,
   registeredTool,
   settle,
@@ -22,7 +22,7 @@ function declarePluginId(): void {
 async function registerMonitorTools(): Promise<void> {
   const host = new MonitorHostDouble()
 
-  await compose(host)
+  await mountPlugin(host)
   expect(host.editor.tools.map((tool) => tool.id)).toEqual([
     MONITOR_START_TOOL,
     "monitor_list",
@@ -34,10 +34,10 @@ async function registerMonitorTools(): Promise<void> {
 async function askShellPermission(): Promise<void> {
   const host = new MonitorHostDouble()
 
-  await compose(host)
+  await mountPlugin(host)
   await startToolPid(host, "true")
   expect(host.permissionRequests).toEqual([
-    expect.objectContaining({ sessionID: HOST_SESSION_ID, action: "shell", resources: ["true"], save: ["true"] }),
+    expect.objectContaining({ sessionID: host.sessionID, action: "shell", resources: ["true"], save: ["true"] }),
   ])
 }
 
@@ -45,7 +45,7 @@ async function skipCommandWhenDenied(): Promise<void> {
   const host = new MonitorHostDouble()
 
   host.denyPermission = true
-  await compose(host)
+  await mountPlugin(host)
   await expect(startToolPid(host, "echo ran")).rejects.toThrow(PERMISSION_DENIED_TEXT)
   await settle()
   expect(host.messages).toHaveLength(0)
@@ -54,11 +54,11 @@ async function skipCommandWhenDenied(): Promise<void> {
 async function wakeSessionWithSynthetic(): Promise<void> {
   const host = new MonitorHostDouble()
 
-  await compose(host)
+  await mountPlugin(host)
   await startToolPid(host, "echo ready")
   await vi.waitFor(() => expect(host.messages).toHaveLength(2))
   expect(host.messages[0]).toMatchObject({
-    sessionID: HOST_SESSION_ID,
+    sessionID: host.sessionID,
     description: "monitor: build log",
     delivery: "steer",
     resume: true,
@@ -69,7 +69,7 @@ async function wakeSessionWithSynthetic(): Promise<void> {
 async function useOpenCodeMessageIds(): Promise<void> {
   const host = new MonitorHostDouble()
 
-  await compose(host)
+  await mountPlugin(host)
   await startToolPid(host, "echo ready")
   await vi.waitFor(() => expect(host.messages).toHaveLength(2))
   expect(host.messages.map((message) => message.id)).toEqual([
@@ -83,7 +83,7 @@ async function rejectForeignMessageId(): Promise<void> {
   const host = new MonitorHostDouble()
 
   await expect(
-    host.session.synthetic({ sessionID: HOST_SESSION_ID, id: "m_4d8ddbc4-1", text: "notice" }),
+    host.session.synthetic({ sessionID: host.sessionID, id: "m_4d8ddbc4-1", text: "notice" }),
   ).rejects.toThrow('Expected a string starting with "msg_"')
 }
 
@@ -136,14 +136,14 @@ function rejectNullPattern(): void {
 async function filterThroughTool(): Promise<void> {
   const host = new MonitorHostDouble()
 
-  await compose(host)
+  await mountPlugin(host)
   await registeredTool(host, MONITOR_START_TOOL).execute(
     Schema.decodeUnknownSync(MONITOR_START_INPUT)({
       command: "printf 'noise\\nREADY\\n'",
       description: "build log",
       pattern: "READY",
     }),
-    toolCallContext(),
+    toolCallContext(host),
   )
   await vi.waitFor(() => expect(host.messages).toHaveLength(2))
   expect(host.messages[0]?.text).toContain("\nREADY\n")
@@ -152,7 +152,7 @@ async function filterThroughTool(): Promise<void> {
 
 async function stopMonitorsOnCleanup(): Promise<void> {
   const host = new MonitorHostDouble()
-  const cleanup = await compose(host)
+  const cleanup = await mountPlugin(host)
   const pid = await startToolPid(host, "sleep 30 & sleep 30")
 
   cleanup()

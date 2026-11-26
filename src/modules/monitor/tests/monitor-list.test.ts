@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest"
 import { DELIVERY_REJECTION, LONG_RUNNING_GROUP, OTHER_SESSION_ID, TEST_SESSION_ID } from "./constants"
-import { makeMonitorSut, monitorRequest, startedPid } from "./support"
+import { makeMonitorSut, monitorRequest, startedMonitor, startedPid } from "./support"
 
 function listRunningMonitor(): void {
   const sut = makeMonitorSut()
@@ -38,7 +38,7 @@ async function recordDeliveryFailure(): Promise<void> {
 async function countLines(): Promise<void> {
   const sut = makeMonitorSut()
 
-  sut.monitors.start({ ...monitorRequest(`echo skip; echo ERROR one; ${LONG_RUNNING_GROUP}`), pattern: /ERROR/ })
+  startedMonitor(sut, { ...monitorRequest(`echo skip; echo ERROR one; ${LONG_RUNNING_GROUP}`), pattern: /ERROR/ })
   await vi.waitFor(() => expect(sut.sink.notices).toHaveLength(1))
   await vi.waitFor(() =>
     expect(sut.monitors.list(TEST_SESSION_ID)[0]?.lines).toEqual({

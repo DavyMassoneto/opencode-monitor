@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto"
 import { AssertInput } from "@opencode/plugin/permission"
 import { Schema } from "effect"
 import {
@@ -10,12 +11,13 @@ import {
   type SyntheticMessage,
   type ToolTransformCallback,
 } from "#monitor/integration"
-import { PERMISSION_DENIED_TEXT } from "./constants"
+import { HOST_SESSION_PREFIX, PERMISSION_DENIED_TEXT } from "./constants"
 import { SYNTHETIC_MESSAGE } from "./schemas"
 import { SessionEventsDouble } from "./session-events-double"
 import { ToolEditorDouble } from "./tool-editor-double"
 
 export class MonitorHostDouble implements MonitorHost {
+  readonly sessionID = `${HOST_SESSION_PREFIX}${randomUUID().replaceAll("-", "")}`
   readonly editor = new ToolEditorDouble()
   readonly permissionRequests: PermissionRequest[] = []
   readonly messages: SyntheticMessage[] = []
@@ -48,7 +50,7 @@ export class MonitorHostDouble implements MonitorHost {
     },
   }
 
-  readonly location: MonitorLocationHost = { directory: process.cwd() }
+  readonly location: MonitorLocationHost = { directory: process.cwd(), project: { directory: process.cwd() } }
 
   readonly event = new SessionEventsDouble()
 }

@@ -42,8 +42,19 @@ export interface MonitorSessionHost {
   synthetic(message: SyntheticMessage): Promise<SyntheticAdmission>
 }
 
+export interface MonitorProjectHost {
+  directory: string
+}
+
 export interface MonitorLocationHost {
   directory: string
+  project: MonitorProjectHost
+}
+
+export interface PermissionScope {
+  action: string
+  resources: string[]
+  save: string[]
 }
 
 export type SessionDeletedType = "session.deleted"

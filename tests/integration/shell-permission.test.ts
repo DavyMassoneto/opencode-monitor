@@ -1,12 +1,17 @@
-import { existsSync, mkdtempSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
+import { existsSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, test } from "vitest"
-import { compose } from "#monitor/composition"
-import { MonitorHostDouble, PERMISSION_DENIED_TEXT, settle, startToolPid } from "../fixtures"
+import {
+  MonitorHostDouble,
+  mountPlugin,
+  PERMISSION_DENIED_TEXT,
+  settle,
+  startToolPid,
+  temporaryDirectory,
+} from "../fixtures"
 
 function canaryFile(): string {
-  const file = join(mkdtempSync(join(tmpdir(), "monitor-canary-")), "target")
+  const file = join(temporaryDirectory("monitor-canary-"), "target")
 
   writeFileSync(file, "keep")
   return file
@@ -17,7 +22,7 @@ async function denyHiddenSubcommand(): Promise<void> {
   const target = canaryFile()
 
   host.deniedResources.push(/^rm /)
-  await compose(host)
+  await mountPlugin(host)
   await expect(startToolPid(host, `echo ok; rm ${target}`)).rejects.toThrow(PERMISSION_DENIED_TEXT)
   await settle()
   expect(existsSync(target)).toBe(true)
@@ -28,7 +33,7 @@ async function denySubstitutedCommand(): Promise<void> {
   const target = canaryFile()
 
   host.deniedResources.push(/^rm /)
-  await compose(host)
+  await mountPlugin(host)
   await expect(startToolPid(host, `echo "$(rm ${target})"`)).rejects.toThrow(PERMISSION_DENIED_TEXT)
   await settle()
   expect(existsSync(target)).toBe(true)
@@ -36,7 +41,7 @@ async function denySubstitutedCommand(): Promise<void> {
 
 async function checkEverySubcommand(): Promise<void> {
   const host = new MonitorHostDouble()
-  const cleanup = await compose(host)
+  await mountPlugin(host)
 
   await startToolPid(host, "tail -f app.log | grep --line-buffered ERROR")
   expect(host.permissionRequests).toEqual([
@@ -46,26 +51,24 @@ async function checkEverySubcommand(): Promise<void> {
       save: ["tail -f app.log", "grep --line-buffered ERROR"],
     }),
   ])
-  cleanup()
 }
 
 async function askAnyDirectoryForOpaqueCommand(): Promise<void> {
   const host = new MonitorHostDouble()
-  const cleanup = await compose(host)
+  await mountPlugin(host)
 
   await startToolPid(host, "eval echo ok")
   expect(host.permissionRequests).toEqual([
     expect.objectContaining({ action: "shell", resources: ["eval echo ok"], save: [] }),
     expect.objectContaining({ action: "external_directory", resources: ["*"], save: [] }),
   ])
-  cleanup()
 }
 
 async function denyOpaqueCommandWithMatchingRule(): Promise<void> {
   const host = new MonitorHostDouble()
 
   host.deniedResources.push(/^\*$/)
-  await compose(host)
+  await mountPlugin(host)
   await expect(startToolPid(host, "bash -c 'echo ok'")).rejects.toThrow(PERMISSION_DENIED_TEXT)
 }
 

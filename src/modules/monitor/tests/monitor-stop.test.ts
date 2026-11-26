@@ -61,6 +61,19 @@ async function stopOnlyOneSession(): Promise<void> {
   sut.monitors.stopAll()
 }
 
+async function leaveNoProcessWhenStoppedAtOnce(): Promise<void> {
+  const sut = makeMonitorSut()
+  const pids: number[] = []
+
+  for (let index = 0; index < 20; index += 1) {
+    const { id, pid } = startedMonitor(sut, { ...monitorRequest(LONG_RUNNING_GROUP), sessionID: `ses_burst_${index}` })
+    await new Promise<void>((resolve) => setTimeout(resolve, index % 4))
+    sut.monitors.stop(`ses_burst_${index}`, id)
+    pids.push(pid)
+  }
+  await Promise.all(pids.map(waitForGroupExit))
+}
+
 function registerTests(): void {
   test("para um monitor pelo id e o lista como stopped", stopOneMonitor)
   test("não envia aviso quando o monitor é parado", sendNoNoticeOnStop)
@@ -68,6 +81,7 @@ function registerTests(): void {
   test("recusa parar monitor de outra sessão", rejectOtherSessionMonitor)
   test("mata com SIGKILL o grupo que ignora SIGTERM", killGroupIgnoringTerm, 10_000)
   test("para só os monitores da sessão encerrada", stopOnlyOneSession)
+  test("não deixa processo vivo mesmo parando logo após iniciar", leaveNoProcessWhenStoppedAtOnce, 15_000)
 }
 
 describe("parada de monitores", registerTests)

@@ -226,7 +226,7 @@ Quando o comando não pode ser analisado (aspas sem fechamento, heredoc, parênt
 
 ### 9.2 Nada controlado pelo modelo vira caminho
 - IDs gerados pelo plugin (`m_` + aleatório), nunca derivados do texto do modelo.
-- Arquivos ficam em `<stateRoot>/<sessionID>/<monitorId>.{stderr.log}` — `sessionID` validado contra o formato de ID.
+- Arquivos ficam em `<os.tmpdir()>/opencode-monitor/<sessionID>/<monitorId>.stderr.log` (rotação em `.stderr.log.1`) — `sessionID` validado contra o formato `ses_` seguido de letras, dígitos e `_`; fora disso, o monitor não inicia.
 
 ### 9.3 Saída é dado não confiável
 - Escapar `& < > " '` no conteúdo; remover sequências ANSI e caracteres de controle.

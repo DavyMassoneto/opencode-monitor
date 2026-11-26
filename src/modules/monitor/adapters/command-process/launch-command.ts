@@ -17,17 +17,19 @@ import { type ExitCodeValue, type ExitSignalValue } from "./types"
 export function launchCommand(request: CommandRequest, handlers: CommandHandlers): CommandLaunch {
   const child = spawn(SHELL_PATH, [SHELL_COMMAND_FLAG, request.command], {
     cwd: request.directory,
+    env: { ...process.env, ...Object.fromEntries(request.environment) },
     detached: true,
     stdio: COMMAND_STDIO,
   })
   child.on("error", (error) => console.error(PROCESS_ERROR_TEXT, error))
 
-  const { pid, stdout } = child
-  if (!pid || !stdout) {
+  const { pid, stdout, stderr } = child
+  if (!pid || !stdout || !stderr) {
     return { kind: COMMAND_FAILED_KIND, reason: LAUNCH_FAILURE_TEXT }
   }
   const group = new ProcessGroup(pid)
   createInterface({ input: stdout, crlfDelay: Number.POSITIVE_INFINITY }).on("line", handlers.onLine)
+  createInterface({ input: stderr, crlfDelay: Number.POSITIVE_INFINITY }).on("line", handlers.onStderr)
   child.on("close", (code, signal) => {
     group.markClosed()
     handlers.onExit(exitOf(code, signal))

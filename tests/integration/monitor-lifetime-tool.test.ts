@@ -1,9 +1,9 @@
 import { Schema } from "effect"
 import { describe, expect, test, vi } from "vitest"
-import { compose } from "#monitor/composition"
 import { MONITOR_START_INPUT } from "#monitor/integration"
 import {
   MonitorHostDouble,
+  mountPlugin,
   registeredTool,
   STARTED_SUMMARY,
   type StartedToolResult,
@@ -17,37 +17,34 @@ async function startWith(host: MonitorHostDouble, input: StartOverrides): Promis
     description: "build log",
     ...input,
   })
-  const result = await registeredTool(host, "monitor_start").execute(decoded, toolCallContext())
+  const result = await registeredTool(host, "monitor_start").execute(decoded, toolCallContext(host))
 
   return Schema.decodeUnknownSync(STARTED_SUMMARY)(result.content)
 }
 
 async function applyDefaultTimeout(): Promise<void> {
   const host = new MonitorHostDouble()
-  const cleanup = await compose(host)
+  await mountPlugin(host)
   const summary = await startWith(host, {})
 
   expect(Date.parse(String(summary.expiresAt)) - Date.parse(summary.startedAt)).toBe(300_000)
-  cleanup()
 }
 
 async function applyRequestedTimeout(): Promise<void> {
   const host = new MonitorHostDouble()
-  const cleanup = await compose(host)
+  await mountPlugin(host)
 
   await startWith(host, { timeout_ms: 300 })
   await vi.waitFor(() => expect(host.messages).toHaveLength(1))
   expect(host.messages[0]?.description).toBe("monitor: build log (expired)")
-  cleanup()
 }
 
 async function ignoreTimeoutWhenPersistent(): Promise<void> {
   const host = new MonitorHostDouble()
-  const cleanup = await compose(host)
+  await mountPlugin(host)
   const summary = await startWith(host, { persistent: true, timeout_ms: 300 })
 
   expect(summary.expiresAt).toBeUndefined()
-  cleanup()
 }
 
 function rejectInvalidTimeouts(): void {

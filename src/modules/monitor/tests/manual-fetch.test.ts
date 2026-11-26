@@ -17,11 +17,11 @@ async function takePendingLines(): Promise<void> {
   const { id } = startedMonitor(sut, manualRequest("echo one; echo two"))
 
   await vi.waitFor(() => expect(sut.monitors.list(TEST_SESSION_ID)[0]?.lines.pending).toBe(2))
-  expect(sut.monitors.fetch({ sessionID: TEST_SESSION_ID, id, peek: false })).toEqual({
+  expect(sut.monitors.fetch({ sessionID: TEST_SESSION_ID, id, peek: false, stderrLines: 0 })).toEqual({
     kind: "fetched",
     monitors: [{ id, lines: ["one", "two"], dropped: 0 }],
   })
-  expect(sut.monitors.fetch({ sessionID: TEST_SESSION_ID, id, peek: false })).toEqual({
+  expect(sut.monitors.fetch({ sessionID: TEST_SESSION_ID, id, peek: false, stderrLines: 0 })).toEqual({
     kind: "fetched",
     monitors: [{ id, lines: [], dropped: 0 }],
   })
@@ -32,8 +32,8 @@ async function peekWithoutTaking(): Promise<void> {
   const { id } = startedMonitor(sut, manualRequest("echo one"))
 
   await vi.waitFor(() => expect(sut.monitors.list(TEST_SESSION_ID)[0]?.lines.pending).toBe(1))
-  sut.monitors.fetch({ sessionID: TEST_SESSION_ID, id, peek: true })
-  expect(sut.monitors.fetch({ sessionID: TEST_SESSION_ID, id, peek: true })).toMatchObject({
+  sut.monitors.fetch({ sessionID: TEST_SESSION_ID, id, peek: true, stderrLines: 0 })
+  expect(sut.monitors.fetch({ sessionID: TEST_SESSION_ID, id, peek: true, stderrLines: 0 })).toMatchObject({
     monitors: [{ lines: ["one"] }],
   })
 }
@@ -43,7 +43,7 @@ async function keepLastThousandLines(): Promise<void> {
   const { id } = startedMonitor(sut, manualRequest("seq 1 1500"))
 
   await vi.waitFor(() => expect(sut.monitors.list(TEST_SESSION_ID)[0]?.status).toBe("exited"))
-  const fetched = sut.monitors.fetch({ sessionID: TEST_SESSION_ID, id, peek: false })
+  const fetched = sut.monitors.fetch({ sessionID: TEST_SESSION_ID, id, peek: false, stderrLines: 0 })
   expect(fetched).toMatchObject({ monitors: [{ dropped: 500 }] })
   expect(fetched.kind === "fetched" && fetched.monitors[0]?.lines).toHaveLength(1000)
   expect(fetched.kind === "fetched" && fetched.monitors[0]?.lines[0]).toBe("501")
@@ -56,7 +56,7 @@ async function fetchEveryMonitorWithLines(): Promise<void> {
 
   startedMonitor(sut, manualRequest(LONG_RUNNING_GROUP))
   await vi.waitFor(() => expect(sut.monitors.list(TEST_SESSION_ID)[1]?.lines.pending).toBe(1))
-  expect(sut.monitors.fetch({ sessionID: TEST_SESSION_ID, peek: false })).toEqual({
+  expect(sut.monitors.fetch({ sessionID: TEST_SESSION_ID, peek: false, stderrLines: 0 })).toEqual({
     kind: "fetched",
     monitors: [{ id: withLines.id, lines: ["one"], dropped: 0 }],
   })
@@ -66,7 +66,7 @@ async function fetchEveryMonitorWithLines(): Promise<void> {
 function rejectUnknownMonitor(): void {
   const sut = makeMonitorSut()
 
-  expect(sut.monitors.fetch({ sessionID: TEST_SESSION_ID, id: "m_00000000", peek: false })).toEqual({
+  expect(sut.monitors.fetch({ sessionID: TEST_SESSION_ID, id: "m_00000000", peek: false, stderrLines: 0 })).toEqual({
     kind: "not_found",
     id: "m_00000000",
   })
@@ -76,7 +76,10 @@ function rejectOtherSessionMonitor(): void {
   const sut = makeMonitorSut()
   const { id } = startedMonitor(sut, manualRequest(LONG_RUNNING_GROUP))
 
-  expect(sut.monitors.fetch({ sessionID: OTHER_SESSION_ID, id, peek: false })).toEqual({ kind: "not_found", id })
+  expect(sut.monitors.fetch({ sessionID: OTHER_SESSION_ID, id, peek: false, stderrLines: 0 })).toEqual({
+    kind: "not_found",
+    id,
+  })
   sut.monitors.stopAll()
 }
 
@@ -85,7 +88,7 @@ async function leaveNothingPendingAfterDelivery(): Promise<void> {
   const { id } = startedMonitor(sut, monitorRequest("echo one"))
 
   await vi.waitFor(() => expect(sut.sink.notices).toHaveLength(2))
-  expect(sut.monitors.fetch({ sessionID: TEST_SESSION_ID, id, peek: false })).toMatchObject({
+  expect(sut.monitors.fetch({ sessionID: TEST_SESSION_ID, id, peek: false, stderrLines: 0 })).toMatchObject({
     monitors: [{ lines: [] }],
   })
 }

@@ -30,7 +30,7 @@ O pedido de permissão é regra do host, não do módulo: a ferramenta pede a pe
 | --- | --- |
 | `src/modules/monitor/public/` | Contratos de entrada e saída, portas requeridas e ponto público de montagem do módulo |
 | `src/modules/monitor/internal/` | Núcleo privado: registro dos monitores, limpeza das linhas, redação de segredos, filtro, agrupamento, detecção de inundação, texto dos avisos e entrega em ordem |
-| `src/modules/monitor/adapters/` | Adaptadores privados: execução do comando num grupo de processos e leitura da saída |
+| `src/modules/monitor/adapters/` | Adaptadores privados: execução do comando num grupo de processos e leitura da saída, e arquivos de stderr por sessão com rotação e retenção |
 | `src/modules/monitor/tests/` | Testes isolados do módulo e substitutos de suas portas |
 | `src/integration/opencode/` | Ferramentas, esquemas de entrada, separação do comando em subcomandos para a permissão de shell, e entrega pelo `@opencode/plugin` |
 | `src/composition/` | Montagem, injeção do adaptador de entrega e encerramento |

@@ -1,0 +1,12 @@
+export const STDERR_SUFFIX = ".stderr.log"
+export const ROTATED_SUFFIX = ".1"
+export const STDERR_MAX_BYTES = 5_242_880
+export const RETENTION_MS = 604_800_000
+export const TAIL_LINE_BYTES = 4100
+export const LINE_BREAK = "\n"
+export const APPEND_FLAG = "a"
+export const READ_FLAG = "r"
+export const SAFE_SESSION_ID = /^ses_\w+$/
+export const UNSAFE_SESSION_TEXT = "the session id cannot be used as a directory name"
+export const STDERR_DIRECTORY_FAILURE_TEXT = "the stderr directory could not be created: "
+export const STDERR_WRITE_FAILURE_TEXT = "[opencode-monitor] stderr log write failed:"

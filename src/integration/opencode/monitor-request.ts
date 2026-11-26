@@ -1,5 +1,6 @@
 import {
   type DeliveryMode,
+  type EnvironmentVariables,
   type MonitorLifetime,
   type MonitorRequest,
   PERSISTENT_LIFETIME_KIND,
@@ -18,14 +19,23 @@ export function monitorRequest(
     command: input.command,
     description: input.description,
     directory,
+    environment: environmentOf(input),
     lifetime: lifetimeOf(input),
     mode: modeOf(input),
+    captureStderr: input.capture_stderr === true,
   }
 
   if (input.pattern) {
     request.pattern = input.pattern
   }
   return request
+}
+
+function environmentOf(input: MonitorStartInput): EnvironmentVariables {
+  if (input.env) {
+    return new Map(Object.entries(input.env))
+  }
+  return new Map<string, string>()
 }
 
 function lifetimeOf(input: MonitorStartInput): MonitorLifetime {

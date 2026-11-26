@@ -11,13 +11,17 @@ export type MonitorLifetime = TimedLifetime | PersistentLifetime
 
 export type DeliveryMode = "wake" | "queue" | "silent" | "manual"
 
+export type EnvironmentVariables = Map<string, string>
+
 export interface MonitorRequest {
   sessionID: string
   command: string
   description: string
   directory: string
+  environment: EnvironmentVariables
   lifetime: MonitorLifetime
   mode: DeliveryMode
+  captureStderr: boolean
   pattern?: RegExp
 }
 
@@ -81,6 +85,7 @@ export interface MonitorSummary {
   startedAt: string
   expiresAt?: string
   endedAt?: string
+  stderrPath: string
   lines: LineCounts
   delivery: DeliveryState
 }
@@ -100,6 +105,7 @@ export type MonitorStop = MonitorStopped | MonitorNotFound
 export interface FetchRequest {
   sessionID: string
   peek: boolean
+  stderrLines: number
   id?: string
 }
 
@@ -107,6 +113,7 @@ export interface PendingLines {
   id: string
   lines: string[]
   dropped: number
+  stderr?: string[]
 }
 
 export interface LinesFetched {

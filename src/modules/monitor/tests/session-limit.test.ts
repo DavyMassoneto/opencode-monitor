@@ -22,8 +22,8 @@ function acceptOtherSessionAtLimit(): void {
   const sut = makeMonitorSut()
 
   fillSession(sut)
-  expect(sut.monitors.start({ ...monitorRequest(LONG_RUNNING_GROUP), sessionID: OTHER_SESSION_ID })).toMatchObject({
-    kind: "started",
+  expect(startedMonitor(sut, { ...monitorRequest(LONG_RUNNING_GROUP), sessionID: OTHER_SESSION_ID })).toMatchObject({
+    status: "running",
   })
   sut.monitors.stopAll()
 }
@@ -33,7 +33,7 @@ function acceptAfterStop(): void {
   const [first] = fillSession(sut)
 
   sut.monitors.stop(monitorRequest(LONG_RUNNING_GROUP).sessionID, String(first))
-  expect(sut.monitors.start(monitorRequest(LONG_RUNNING_GROUP))).toMatchObject({ kind: "started" })
+  expect(startedMonitor(sut, monitorRequest(LONG_RUNNING_GROUP))).toMatchObject({ status: "running" })
   sut.monitors.stopAll()
 }
 

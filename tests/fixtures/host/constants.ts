@@ -1,4 +1,4 @@
-export const HOST_SESSION_ID = "ses_host_test"
+export const HOST_SESSION_PREFIX = "ses_host_"
 export const HOST_AGENT = "build"
 export const HOST_MESSAGE_ID = "msg_host_test"
 export const HOST_CALL_ID = "call_host_test"

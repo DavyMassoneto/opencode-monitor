@@ -23,6 +23,7 @@ function baseSummary(monitor: RunningMonitor, status: MonitorStatus): MonitorSum
     status,
     mode: monitor.request.mode,
     startedAt: monitor.startedAt.toISOString(),
+    stderrPath: monitor.log.path,
     lines: monitor.channel.lines,
     delivery: monitor.channel.delivery,
   }

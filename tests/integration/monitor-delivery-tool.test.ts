@@ -1,10 +1,10 @@
 import { Schema } from "effect"
 import { describe, expect, test, vi } from "vitest"
-import { compose } from "#monitor/composition"
 import { MONITOR_START_INPUT } from "#monitor/integration"
 import {
   type DeliveredOptions,
   MonitorHostDouble,
+  mountPlugin,
   registeredTool,
   type StartOverrides,
   settle,
@@ -13,18 +13,17 @@ import {
 
 async function startWith(host: MonitorHostDouble, command: string, input: StartOverrides): Promise<string> {
   const decoded = Schema.decodeUnknownSync(MONITOR_START_INPUT)({ command, description: "build log", ...input })
-  const result = await registeredTool(host, "monitor_start").execute(decoded, toolCallContext())
+  const result = await registeredTool(host, "monitor_start").execute(decoded, toolCallContext(host))
 
   return String(result.content)
 }
 
 async function deliveredOptions(input: StartOverrides): Promise<DeliveredOptions> {
   const host = new MonitorHostDouble()
-  const cleanup = await compose(host)
+  await mountPlugin(host)
 
   await startWith(host, "echo ready", input)
   await vi.waitFor(() => expect(host.messages).toHaveLength(2))
-  cleanup()
   return { delivery: host.messages[0]?.delivery, resume: host.messages[0]?.resume }
 }
 
@@ -42,33 +41,31 @@ async function waitSilently(): Promise<void> {
 
 async function sendNothingWhenManual(): Promise<void> {
   const host = new MonitorHostDouble()
-  const cleanup = await compose(host)
+  await mountPlugin(host)
 
   await startWith(host, "echo ready", { delivery: "manual" })
   await settle()
   await settle()
   expect(host.messages).toHaveLength(0)
-  cleanup()
 }
 
 async function fetchThroughTool(): Promise<void> {
   const host = new MonitorHostDouble()
-  const cleanup = await compose(host)
+  await mountPlugin(host)
 
   await startWith(host, "echo one; echo two", { delivery: "manual" })
   await settle()
-  const result = await registeredTool(host, "monitor_fetch").execute({}, toolCallContext())
+  const result = await registeredTool(host, "monitor_fetch").execute({}, toolCallContext(host))
   expect(JSON.parse(String(result.content))).toEqual([expect.objectContaining({ lines: ["one", "two"], dropped: 0 })])
-  cleanup()
 }
 
 async function rejectUnknownFetch(): Promise<void> {
   const host = new MonitorHostDouble()
 
-  await compose(host)
-  await expect(registeredTool(host, "monitor_fetch").execute({ id: "m_00000000" }, toolCallContext())).rejects.toThrow(
-    "no monitor with this id in this session: m_00000000",
-  )
+  await mountPlugin(host)
+  await expect(
+    registeredTool(host, "monitor_fetch").execute({ id: "m_00000000" }, toolCallContext(host)),
+  ).rejects.toThrow("no monitor with this id in this session: m_00000000")
 }
 
 function rejectUnknownMode(): void {

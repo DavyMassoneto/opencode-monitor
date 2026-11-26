@@ -1,5 +1,5 @@
-import { MISSING_PROCESS_CODE } from "./constants"
+import { GONE_PROCESS_CODES } from "./constants"
 
-export function isMissingProcessError(error: Error): boolean {
-  return "code" in error && error.code === MISSING_PROCESS_CODE
+export function isGoneProcessError(error: Error): boolean {
+  return "code" in error && typeof error.code === "string" && GONE_PROCESS_CODES.includes(error.code)
 }

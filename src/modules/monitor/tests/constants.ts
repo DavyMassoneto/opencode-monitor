@@ -15,3 +15,5 @@ export const TEST_TIMEOUT_MS = 300_000
 export const SHORT_TIMEOUT_MS = 300
 export const HISTORY_LIMIT = 20
 export const GROUP_EXIT_TIMEOUT_MS = 5000
+export const STDERR_ROOT_PREFIX = "monitor-stderr-"
+export const TEST_ENV_NAME = "MONITOR_TEST_VALUE"

@@ -7,10 +7,13 @@ export function fetchLines(
   input: MonitorFetchInput,
   context: MonitorCallContext,
 ): MonitorToolResult {
-  const request: FetchRequest = { sessionID: context.sessionID, peek: input.peek === true }
+  const request: FetchRequest = { sessionID: context.sessionID, peek: input.peek === true, stderrLines: 0 }
 
   if (input.id) {
     request.id = input.id
+  }
+  if (input.stderr_lines) {
+    request.stderrLines = input.stderr_lines
   }
   const fetched = monitors.fetch(request)
   if (fetched.kind === MONITOR_NOT_FOUND_KIND) {

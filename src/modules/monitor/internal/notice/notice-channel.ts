@@ -10,7 +10,13 @@ import { FloodMeter } from "../flood-detection"
 import { BATCH_MAX_LINES, type BatchContent, LineBatch, PENDING_MAX_LINES } from "../line-batching"
 import { cleanLine } from "../line-cleaning"
 import { redactSecrets } from "../secret-redaction"
-import { NOTICE_LABEL_PREFIX, NOTICE_LINE_COUNT_CLOSING, NOTICE_LINE_COUNT_OPENING } from "./constants"
+import {
+  NO_PREFIX,
+  NOTICE_LABEL_PREFIX,
+  NOTICE_LINE_COUNT_CLOSING,
+  NOTICE_LINE_COUNT_OPENING,
+  STDERR_PREFIX,
+} from "./constants"
 import { type ChannelCounts, type ChannelSetup } from "./types"
 import { writeNotice } from "./write-notice"
 
@@ -54,8 +60,19 @@ export class NoticeChannel {
   }
 
   receiveLine(raw: string): void {
+    this.accept(cleanLine(raw), NO_PREFIX)
+  }
+
+  receiveStderr(raw: string): void {
     const line = cleanLine(raw)
 
+    this.setup.log.append(redactSecrets(line))
+    if (this.setup.request.captureStderr) {
+      this.accept(line, STDERR_PREFIX)
+    }
+  }
+
+  private accept(line: string, prefix: string): void {
     this.counts.received += 1
     if (this.accepting && this.isWanted(line)) {
       const now = Date.now()
@@ -63,7 +80,7 @@ export class NoticeChannel {
         this.accepting = false
         this.setup.onFlood()
       } else {
-        this.counts.last = redactSecrets(line)
+        this.counts.last = `${prefix}${redactSecrets(line)}`
         this.batch.add(this.counts.last, now)
         if (!this.manual) {
           this.schedule(now)
@@ -81,6 +98,7 @@ export class NoticeChannel {
   end(line: string, labelSuffix: string): void {
     this.accepting = false
     this.cancelTimer()
+    this.setup.log.close()
     if (!this.manual) {
       this.flushBatch()
       this.enqueue([line], 0, `${NOTICE_LABEL_PREFIX}${this.setup.request.description}${labelSuffix}`, 0)
@@ -91,6 +109,7 @@ export class NoticeChannel {
     this.accepting = false
     this.silenced = true
     this.cancelTimer()
+    this.setup.log.close()
   }
 
   private schedule(now: number): void {

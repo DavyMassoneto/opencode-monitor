@@ -1,6 +1,9 @@
+import { type EnvironmentVariables } from "#monitor/modules/monitor/public/contracts"
+
 export interface CommandRequest {
   command: string
   directory: string
+  environment: EnvironmentVariables
 }
 
 export interface CodeExit {
@@ -21,6 +24,7 @@ export type ExitHandler = (exit: CommandExit) => void
 
 export interface CommandHandlers {
   onLine: LineHandler
+  onStderr: LineHandler
   onExit: ExitHandler
 }
 

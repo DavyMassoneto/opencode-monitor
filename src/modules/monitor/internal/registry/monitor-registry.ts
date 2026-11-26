@@ -18,6 +18,7 @@ import {
 import { COMMAND_FAILED_KIND, type CommandExit } from "../command-port"
 import { DeadlineTimer } from "../deadline"
 import { NoticeChannel } from "../notice"
+import { STDERR_LOG_FAILED_KIND, type StderrLog } from "../stderr-port"
 import {
   ENDING_EXPIRED,
   ENDING_FLOODED,
@@ -29,6 +30,7 @@ import { endingNotice } from "./ending-notice"
 import { MonitorHistory } from "./monitor-history"
 import { createMonitorId } from "./monitor-id"
 import { pendingOf } from "./pending-of"
+import { hasContent } from "./predicates"
 import { summarizeFinished, summarizeRunning } from "./summarize"
 import { type MonitorEnding, type RegistryDependencies, type RunningMonitor } from "./types"
 
@@ -70,13 +72,10 @@ export class MonitorRegistry implements Monitors {
       if (!monitor) {
         return { kind: MONITOR_NOT_FOUND_KIND, id: request.id }
       }
-      return { kind: LINES_FETCHED_KIND, monitors: [pendingOf(monitor, request.peek)] }
+      return { kind: LINES_FETCHED_KIND, monitors: [pendingOf(monitor, request)] }
     }
-    const fetched = monitors.map((monitor) => pendingOf(monitor, request.peek))
-    return {
-      kind: LINES_FETCHED_KIND,
-      monitors: fetched.filter((pending) => pending.lines.length > 0 || pending.dropped > 0),
-    }
+    const fetched = monitors.map((monitor) => pendingOf(monitor, request))
+    return { kind: LINES_FETCHED_KIND, monitors: fetched.filter(hasContent) }
   }
 
   stopSession(sessionID: string): void {
@@ -84,6 +83,7 @@ export class MonitorRegistry implements Monitors {
       this.halt(monitor)
     }
     this.history.forget(sessionID)
+    this.dependencies.stderr.removeSession(sessionID)
   }
 
   stopAll(): void {
@@ -91,6 +91,7 @@ export class MonitorRegistry implements Monitors {
       this.halt(monitor)
     }
     this.history.clear()
+    this.dependencies.stderr.removeAll()
   }
 
   private knownIn(sessionID: string): RunningMonitor[] {
@@ -103,23 +104,46 @@ export class MonitorRegistry implements Monitors {
 
   private launch(request: MonitorRequest): MonitorStart {
     const id = createMonitorId()
+    const opened = this.dependencies.stderr.open(request.sessionID, id)
+
+    if (opened.kind === STDERR_LOG_FAILED_KIND) {
+      return { kind: MONITOR_FAILED_KIND, reason: opened.reason }
+    }
+    return this.spawn(request, id, opened.log)
+  }
+
+  private spawn(request: MonitorRequest, id: string, log: StderrLog): MonitorStart {
     const { sink, createNoticeId, launch } = this.dependencies
     const channel = new NoticeChannel({
       sink,
       createNoticeId,
       request,
       monitorId: id,
+      log,
       onFlood: () => this.endEarly(id, ENDING_FLOODED),
     })
     const command = launch(
-      { command: request.command, directory: request.directory },
-      { onLine: (line) => channel.receiveLine(line), onExit: (exit) => this.finish(id, exit) },
+      { command: request.command, directory: request.directory, environment: request.environment },
+      {
+        onLine: (line) => channel.receiveLine(line),
+        onStderr: (line) => channel.receiveStderr(line),
+        onExit: (exit) => this.finish(id, exit),
+      },
     )
 
     if (command.kind === COMMAND_FAILED_KIND) {
+      log.close()
       return { kind: MONITOR_FAILED_KIND, reason: command.reason }
     }
-    const monitor: RunningMonitor = { id, request, command, channel, startedAt: new Date(), ending: ENDING_RUNNING }
+    const monitor: RunningMonitor = {
+      id,
+      request,
+      command,
+      channel,
+      log,
+      startedAt: new Date(),
+      ending: ENDING_RUNNING,
+    }
     this.arm(monitor)
     this.running.set(id, monitor)
     return { kind: MONITOR_STARTED_KIND, summary: summarizeRunning(monitor) }

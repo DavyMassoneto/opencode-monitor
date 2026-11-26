@@ -1,16 +1,19 @@
+import { mkdtempSync, realpathSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { Agent } from "@opencode/plugin"
 import { Session } from "@opencode/schema/session"
 import { SessionMessage } from "@opencode/schema/session-message"
 import { Tool } from "@opencode/schema/tool"
 import { Schema } from "effect"
-import { expect, vi } from "vitest"
+import { expect, onTestFinished, vi } from "vitest"
+import { compose, type MonitorCleanup } from "#monitor/composition"
 import {
   GROUP_EXIT_TIMEOUT_MS,
   HOST_AGENT,
   HOST_CALL_ID,
   HOST_DESCRIPTION,
   HOST_MESSAGE_ID,
-  HOST_SESSION_ID,
   MONITOR_START_TOOL,
   PROBE_SIGNAL,
   SETTLE_MS,
@@ -19,9 +22,9 @@ import { type MonitorHostDouble } from "./monitor-host-double"
 import { STARTED_SUMMARY } from "./schemas"
 import { type RegisteredTool, type StartedToolResult, type ToolCallContext } from "./types"
 
-export function toolCallContext(): ToolCallContext {
+export function toolCallContext(host: MonitorHostDouble): ToolCallContext {
   return {
-    sessionID: Schema.decodeSync(Session.ID)(HOST_SESSION_ID),
+    sessionID: Schema.decodeSync(Session.ID)(host.sessionID),
     agent: Schema.decodeSync(Agent.ID)(HOST_AGENT),
     messageID: Schema.decodeSync(SessionMessage.ID)(HOST_MESSAGE_ID),
     id: Schema.decodeSync(Tool.CallID)(HOST_CALL_ID),
@@ -42,7 +45,7 @@ export function registeredTool(host: MonitorHostDouble, name: string): Registere
 export async function startTool(host: MonitorHostDouble, command: string): Promise<StartedToolResult> {
   const result = await registeredTool(host, MONITOR_START_TOOL).execute(
     { command, description: HOST_DESCRIPTION },
-    toolCallContext(),
+    toolCallContext(host),
   )
 
   return Schema.decodeUnknownSync(STARTED_SUMMARY)(result.content)
@@ -67,4 +70,18 @@ export async function settle(): Promise<void> {
 
 export async function waitForGroupExit(pid: number): Promise<void> {
   await vi.waitFor(() => expect(isGroupAlive(pid)).toBe(false), { timeout: GROUP_EXIT_TIMEOUT_MS })
+}
+
+export async function mountPlugin(host: MonitorHostDouble): Promise<MonitorCleanup> {
+  const cleanup = await compose(host)
+
+  onTestFinished(cleanup)
+  return cleanup
+}
+
+export function temporaryDirectory(prefix: string): string {
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), prefix)))
+
+  onTestFinished(() => rmSync(directory, { recursive: true, force: true }))
+  return directory
 }

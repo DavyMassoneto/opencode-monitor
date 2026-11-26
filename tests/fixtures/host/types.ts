@@ -20,3 +20,14 @@ export interface StartOverrides {
 }
 
 export type DeliveredOptions = Pick<SyntheticMessage, "delivery" | "resume">
+
+export interface StartEnvironment {
+  DEPLOY_TARGET?: string
+}
+
+export interface StartInput {
+  command: string
+  cwd?: string
+  env?: StartEnvironment
+  capture_stderr?: boolean
+}
