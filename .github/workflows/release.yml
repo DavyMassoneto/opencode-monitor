@@ -18,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,7 +26,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
+          registry-url: https://registry.npmjs.org/
       - run: npm install --global npm@11
       - run: npm ci
       - id: next
@@ -48,18 +49,7 @@ jobs:
           git commit -m "chore(release): ${{ steps.next.outputs.tag }} [skip ci]"
           git tag "${{ steps.next.outputs.tag }}"
       - if: steps.next.outputs.release == 'true'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "::error::O segredo NPM_TOKEN não está configurado."
-            exit 1
-          fi
-          umask 077
-          export NPM_CONFIG_USERCONFIG="$(mktemp "$RUNNER_TEMP/npmrc.XXXXXX")"
-          trap 'rm -f "$NPM_CONFIG_USERCONFIG"' EXIT
-          printf '%s\n' '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}' > "$NPM_CONFIG_USERCONFIG"
-          npm publish --access public --registry https://registry.npmjs.org/
+        run: npm publish --access public --registry https://registry.npmjs.org/
       - if: steps.next.outputs.release == 'true'
         run: git push origin HEAD:main "${{ steps.next.outputs.tag }}"
       - if: steps.next.outputs.release == 'true'
