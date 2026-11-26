@@ -1,0 +1,48 @@
+{
+  "name": "@davy121/opencode-monitor",
+  "version": "0.0.0",
+  "description": "Monitor tool for OpenCode v2: watch a background command and wake the agent with a notification on each matching line",
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "monitor",
+    "agent"
+  ],
+  "license": "MIT",
+  "author": "DavyMassoneto",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DavyMassoneto/opencode-monitor.git"
+  },
+  "homepage": "https://github.com/DavyMassoneto/opencode-monitor#readme",
+  "bugs": {
+    "url": "https://github.com/DavyMassoneto/opencode-monitor/issues"
+  },
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "format": "biome check --write .",
+    "lint": "biome check .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@opencode/plugin": ">=2.4.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.9",
+    "@opencode/plugin": "2.4.1",
+    "@types/node": "24.19.4",
+    "git-cliff": "2.14.2",
+    "typescript": "7.0.2",
+    "vitest": "5.1.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
