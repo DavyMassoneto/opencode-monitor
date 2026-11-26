@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest"
 import { LONG_RUNNING_GROUP } from "./constants"
-import { isGroupAlive, makeMonitorSut, settle, startedPid } from "./support"
+import { isGroupAlive, makeMonitorSut, settle, startedPid, waitForGroupExit } from "./support"
 
 async function stopWholeGroup(): Promise<void> {
   const sut = makeMonitorSut()
@@ -8,7 +8,7 @@ async function stopWholeGroup(): Promise<void> {
 
   expect(isGroupAlive(pid)).toBe(true)
   sut.monitors.stopAll()
-  await vi.waitFor(() => expect(isGroupAlive(pid)).toBe(false))
+  await waitForGroupExit(pid)
 }
 
 async function skipNoticesAfterStop(): Promise<void> {
@@ -16,7 +16,7 @@ async function skipNoticesAfterStop(): Promise<void> {
   const pid = startedPid(sut, LONG_RUNNING_GROUP)
 
   sut.monitors.stopAll()
-  await vi.waitFor(() => expect(isGroupAlive(pid)).toBe(false))
+  await waitForGroupExit(pid)
   await settle()
   expect(sut.sink.notices).toHaveLength(0)
 }

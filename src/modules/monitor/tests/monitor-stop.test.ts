@@ -1,14 +1,17 @@
 import { describe, expect, test, vi } from "vitest"
 import { LONG_RUNNING_GROUP, OTHER_SESSION_ID, TERM_IGNORING_GROUP, TEST_SESSION_ID } from "./constants"
-import { isGroupAlive, makeMonitorSut, monitorRequest, settle, startedMonitor } from "./support"
+import { isGroupAlive, makeMonitorSut, monitorRequest, settle, startedMonitor, waitForGroupExit } from "./support"
 
 async function stopOneMonitor(): Promise<void> {
   const sut = makeMonitorSut()
   const { id, pid } = startedMonitor(sut, monitorRequest(LONG_RUNNING_GROUP))
 
-  expect(sut.monitors.stop(TEST_SESSION_ID, id)).toMatchObject({ kind: "stopped", summary: { id, pid } })
-  await vi.waitFor(() => expect(isGroupAlive(pid)).toBe(false))
-  expect(sut.monitors.list(TEST_SESSION_ID)).toEqual([])
+  expect(sut.monitors.stop(TEST_SESSION_ID, id)).toMatchObject({
+    kind: "stopped",
+    summary: { id, pid, status: "stopped" },
+  })
+  await waitForGroupExit(pid)
+  expect(sut.monitors.list(TEST_SESSION_ID)).toEqual([expect.objectContaining({ id, status: "stopped" })])
 }
 
 async function sendNoNoticeOnStop(): Promise<void> {
@@ -43,7 +46,7 @@ async function killGroupIgnoringTerm(): Promise<void> {
   sut.monitors.stop(TEST_SESSION_ID, id)
   await settle()
   expect(isGroupAlive(pid)).toBe(true)
-  await vi.waitFor(() => expect(isGroupAlive(pid)).toBe(false), { timeout: 5000 })
+  await waitForGroupExit(pid)
 }
 
 async function stopOnlyOneSession(): Promise<void> {
@@ -52,14 +55,14 @@ async function stopOnlyOneSession(): Promise<void> {
   const other = startedMonitor(sut, { ...monitorRequest(LONG_RUNNING_GROUP), sessionID: OTHER_SESSION_ID })
 
   sut.monitors.stopSession(TEST_SESSION_ID)
-  await vi.waitFor(() => expect(isGroupAlive(own.pid)).toBe(false))
+  await waitForGroupExit(own.pid)
   expect(sut.monitors.list(OTHER_SESSION_ID)).toEqual([expect.objectContaining({ id: other.id })])
   expect(isGroupAlive(other.pid)).toBe(true)
   sut.monitors.stopAll()
 }
 
 function registerTests(): void {
-  test("para um monitor pelo id e tira da lista", stopOneMonitor)
+  test("para um monitor pelo id e o lista como stopped", stopOneMonitor)
   test("não envia aviso quando o monitor é parado", sendNoNoticeOnStop)
   test("recusa parar id desconhecido", rejectUnknownId)
   test("recusa parar monitor de outra sessão", rejectOtherSessionMonitor)

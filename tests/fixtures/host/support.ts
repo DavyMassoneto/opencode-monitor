@@ -3,7 +3,9 @@ import { Session } from "@opencode/schema/session"
 import { SessionMessage } from "@opencode/schema/session-message"
 import { Tool } from "@opencode/schema/tool"
 import { Schema } from "effect"
+import { expect, vi } from "vitest"
 import {
+  GROUP_EXIT_TIMEOUT_MS,
   HOST_AGENT,
   HOST_CALL_ID,
   HOST_DESCRIPTION,
@@ -14,7 +16,7 @@ import {
   SETTLE_MS,
 } from "./constants"
 import { type MonitorHostDouble } from "./monitor-host-double"
-import { STARTED_TOOL_RESULT } from "./schemas"
+import { STARTED_SUMMARY } from "./schemas"
 import { type RegisteredTool, type StartedToolResult, type ToolCallContext } from "./types"
 
 export function toolCallContext(): ToolCallContext {
@@ -43,7 +45,7 @@ export async function startTool(host: MonitorHostDouble, command: string): Promi
     toolCallContext(),
   )
 
-  return Schema.decodeUnknownSync(STARTED_TOOL_RESULT)(result.content)
+  return Schema.decodeUnknownSync(STARTED_SUMMARY)(result.content)
 }
 
 export async function startToolPid(host: MonitorHostDouble, command: string): Promise<number> {
@@ -61,4 +63,8 @@ export function isGroupAlive(pid: number): boolean {
 
 export async function settle(): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, SETTLE_MS))
+}
+
+export async function waitForGroupExit(pid: number): Promise<void> {
+  await vi.waitFor(() => expect(isGroupAlive(pid)).toBe(false), { timeout: GROUP_EXIT_TIMEOUT_MS })
 }

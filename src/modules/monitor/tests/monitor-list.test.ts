@@ -46,12 +46,14 @@ async function countLines(): Promise<void> {
   sut.monitors.stopAll()
 }
 
-async function dropFinishedMonitor(): Promise<void> {
+async function keepFinishedMonitor(): Promise<void> {
   const sut = makeMonitorSut()
 
   startedPid(sut, "true")
   await vi.waitFor(() => expect(sut.sink.notices).toHaveLength(1))
-  expect(sut.monitors.list(TEST_SESSION_ID)).toEqual([])
+  expect(sut.monitors.list(TEST_SESSION_ID)).toEqual([
+    expect.objectContaining({ status: "exited", endedAt: expect.any(String) }),
+  ])
 }
 
 function registerTests(): void {
@@ -59,7 +61,7 @@ function registerTests(): void {
   test("não lista monitores de outra sessão", hideOtherSessions)
   test("registra no monitor a falha de entrega do aviso", recordDeliveryFailure)
   test("conta linhas recebidas e entregues e guarda a última", countLines)
-  test("tira da lista o monitor cujo comando terminou", dropFinishedMonitor)
+  test("mantém na lista o monitor terminado, com status exited", keepFinishedMonitor)
 }
 
 describe("lista de monitores", registerTests)

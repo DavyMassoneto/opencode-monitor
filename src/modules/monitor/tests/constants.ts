@@ -11,3 +11,7 @@ export const OTHER_SESSION_ID = "ses_other_test"
 export const DELIVERY_REJECTION = "Expected a string starting with msg_"
 export const TERM_IGNORING_GROUP = "trap '' TERM; echo armed; sleep 30"
 export const SESSION_LIMIT = 10
+export const TEST_TIMEOUT_MS = 300_000
+export const SHORT_TIMEOUT_MS = 300
+export const HISTORY_LIMIT = 20
+export const GROUP_EXIT_TIMEOUT_MS = 5000

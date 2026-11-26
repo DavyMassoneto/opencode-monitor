@@ -1,15 +1,26 @@
+export interface TimedLifetime {
+  kind: "timed"
+  timeoutMs: number
+}
+
+export interface PersistentLifetime {
+  kind: "persistent"
+}
+
+export type MonitorLifetime = TimedLifetime | PersistentLifetime
+
 export interface MonitorRequest {
   sessionID: string
   command: string
   description: string
   directory: string
+  lifetime: MonitorLifetime
   pattern?: RegExp
 }
 
 export interface MonitorStarted {
   kind: "started"
-  id: string
-  pid: number
+  summary: MonitorSummary
 }
 
 export interface MonitorFailed {
@@ -52,12 +63,17 @@ export interface LineCounts {
   last?: string
 }
 
+export type MonitorStatus = "running" | "exited" | "stopped" | "expired" | "flooded"
+
 export interface MonitorSummary {
   id: string
   description: string
   command: string
   pid: number
+  status: MonitorStatus
   startedAt: string
+  expiresAt?: string
+  endedAt?: string
   lines: LineCounts
   delivery: DeliveryState
 }

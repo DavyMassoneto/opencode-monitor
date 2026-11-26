@@ -7,3 +7,4 @@ export const MONITOR_START_TOOL = "monitor_start"
 export const PERMISSION_DENIED_TEXT = "permission denied by rule"
 export const SETTLE_MS = 200
 export const PROBE_SIGNAL = 0
+export const GROUP_EXIT_TIMEOUT_MS = 5000

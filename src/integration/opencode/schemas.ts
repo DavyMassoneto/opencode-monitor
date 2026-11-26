@@ -5,6 +5,12 @@ export const MONITOR_START_INPUT = Schema.Struct({
   command: Schema.NonEmptyString.annotate({ description: "Shell command; each line it prints to stdout is an event." }),
   description: Schema.NonEmptyString.annotate({ description: "Short label shown on each notification." }),
   pattern: PATTERN_FROM_STRING.pipe(Schema.optionalKey),
+  timeout_ms: Schema.Int.check(Schema.isGreaterThan(0))
+    .annotate({ description: "Milliseconds until the monitor ends with a final notice. Default 300000 (5 minutes)." })
+    .pipe(Schema.optionalKey),
+  persistent: Schema.Boolean.annotate({
+    description: "Keep the monitor until monitor_stop or the end of the session; timeout_ms is ignored.",
+  }).pipe(Schema.optionalKey),
 })
 
 export const MONITOR_LIST_INPUT = Schema.Struct({})

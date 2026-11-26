@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest"
 import { TEST_LABEL } from "./constants"
-import { isGroupAlive, makeMonitorSut, startedPid } from "./support"
+import { makeMonitorSut, startedPid, waitForGroupExit } from "./support"
 
 async function stopFloodingCommand(): Promise<void> {
   const sut = makeMonitorSut()
@@ -8,7 +8,7 @@ async function stopFloodingCommand(): Promise<void> {
 
   await vi.waitFor(() => expect(sut.sink.notices.at(-1)?.label).toBe(`${TEST_LABEL} (flooded)`), { timeout: 10_000 })
   expect(sut.sink.notices.at(-1)?.text).toContain("more than 100 lines per second for 5 seconds")
-  await vi.waitFor(() => expect(isGroupAlive(pid)).toBe(false))
+  await waitForGroupExit(pid)
 }
 
 async function keepSteadyCommand(): Promise<void> {

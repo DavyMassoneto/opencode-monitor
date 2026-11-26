@@ -1,5 +1,5 @@
 import { type ToolTransformCallback } from "#monitor/integration"
-import { type STARTED_TOOL_RESULT } from "./schemas"
+import { type STARTED_SUMMARY } from "./schemas"
 
 export type ToolEditor = Parameters<ToolTransformCallback>[0]
 
@@ -11,4 +11,9 @@ export type ToolCallContext = Parameters<RegisteredTool["execute"]>[1]
 
 export type WakeSubscriber = () => void
 
-export type StartedToolResult = typeof STARTED_TOOL_RESULT.Type
+export type StartedToolResult = typeof STARTED_SUMMARY.Type
+
+export interface StartOverrides {
+  timeout_ms?: number
+  persistent?: boolean
+}

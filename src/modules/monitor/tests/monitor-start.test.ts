@@ -1,21 +1,23 @@
 import { describe, expect, test } from "vitest"
 import { MISSING_DIRECTORY } from "./constants"
-import { makeMonitorSut, monitorRequest } from "./support"
+import { makeMonitorSut, monitorRequest, startedMonitor } from "./support"
 
 function returnStartedProcess(): void {
   const sut = makeMonitorSut()
   const started = sut.monitors.start(monitorRequest("true"))
 
-  expect(started).toMatchObject({ kind: "started", id: expect.stringMatching(/^m_[0-9a-f]{8}$/) })
-  expect(started).toHaveProperty("pid", expect.any(Number))
+  expect(started).toMatchObject({
+    kind: "started",
+    summary: { id: expect.stringMatching(/^m_[0-9a-f]{8}$/), pid: expect.any(Number), status: "running" },
+  })
 }
 
 function giveDistinctMonitorIds(): void {
   const sut = makeMonitorSut()
-  const first = sut.monitors.start(monitorRequest("true"))
-  const second = sut.monitors.start(monitorRequest("true"))
+  const first = startedMonitor(sut, monitorRequest("true"))
+  const second = startedMonitor(sut, monitorRequest("true"))
 
-  expect(first).not.toEqual(second)
+  expect(first.id).not.toBe(second.id)
 }
 
 async function rejectMissingDirectory(): Promise<void> {

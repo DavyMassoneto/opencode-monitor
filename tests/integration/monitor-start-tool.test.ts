@@ -5,7 +5,6 @@ import { compose, PLUGIN_ID } from "#monitor/composition"
 import { MONITOR_START_INPUT } from "#monitor/integration"
 import {
   HOST_SESSION_ID,
-  isGroupAlive,
   MONITOR_START_TOOL,
   MonitorHostDouble,
   PERMISSION_DENIED_TEXT,
@@ -13,6 +12,7 @@ import {
   settle,
   startToolPid,
   toolCallContext,
+  waitForGroupExit,
 } from "../fixtures"
 
 function declarePluginId(): void {
@@ -151,7 +151,7 @@ async function stopMonitorsOnCleanup(): Promise<void> {
   const pid = await startToolPid(host, "sleep 30 & sleep 30")
 
   cleanup()
-  await vi.waitFor(() => expect(isGroupAlive(pid)).toBe(false))
+  await waitForGroupExit(pid)
 }
 
 function registerTests(): void {

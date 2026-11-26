@@ -3,8 +3,14 @@ import { SessionInbox } from "@opencode/schema/session-inbox"
 import { SessionMessage } from "@opencode/schema/session-message"
 import { Schema } from "effect"
 
-export const STARTED_TOOL_RESULT = Schema.fromJsonString(
-  Schema.Struct({ id: Schema.String, pid: Schema.Number, status: Schema.String }),
+export const STARTED_SUMMARY = Schema.fromJsonString(
+  Schema.Struct({
+    id: Schema.String,
+    pid: Schema.Number,
+    status: Schema.String,
+    startedAt: Schema.String,
+    expiresAt: Schema.String.pipe(Schema.optionalKey),
+  }),
 )
 
 export const SYNTHETIC_MESSAGE = Schema.Struct({

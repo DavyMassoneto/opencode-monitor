@@ -1,4 +1,5 @@
 export * from "./command-port"
+export * from "./deadline"
 export * from "./flood-detection"
 export * from "./line-batching"
 export * from "./line-cleaning"

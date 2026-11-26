@@ -5,50 +5,47 @@ import {
   MONITOR_STOPPED_KIND,
   type MonitorRequest,
   type MonitorStart,
+  type MonitorStatus,
   type MonitorStop,
   type MonitorSummary,
   type Monitors,
+  STATUS_STOPPED,
+  TIMED_LIFETIME_KIND,
 } from "#monitor/modules/monitor/public/contracts"
 import { COMMAND_FAILED_KIND, type CommandExit } from "../command-port"
-import { exitLine, NoticeChannel } from "../notice"
+import { DeadlineTimer } from "../deadline"
+import { NoticeChannel } from "../notice"
 import {
-  ENDED_LABEL_SUFFIX,
+  ENDING_EXPIRED,
   ENDING_FLOODED,
   ENDING_RUNNING,
-  FLOODED_LABEL_SUFFIX,
-  FLOODED_TEXT,
   MAX_MONITORS_PER_SESSION,
-  MONITOR_TIMEOUT_MS,
   SESSION_LIMIT_TEXT,
 } from "./constants"
+import { endingNotice } from "./ending-notice"
+import { MonitorHistory } from "./monitor-history"
 import { createMonitorId } from "./monitor-id"
-import { summarize } from "./summarize"
-import { type RegistryDependencies, type RunningMonitor } from "./types"
+import { summarizeFinished, summarizeRunning } from "./summarize"
+import { type MonitorEnding, type RegistryDependencies, type RunningMonitor } from "./types"
 
 export class MonitorRegistry implements Monitors {
   private readonly dependencies: RegistryDependencies
   private readonly running = new Map<string, RunningMonitor>()
+  private readonly history = new MonitorHistory()
 
   constructor(dependencies: RegistryDependencies) {
     this.dependencies = dependencies
   }
 
   start(request: MonitorRequest): MonitorStart {
-    if (this.list(request.sessionID).length >= MAX_MONITORS_PER_SESSION) {
+    if (this.runningIn(request.sessionID).length >= MAX_MONITORS_PER_SESSION) {
       return { kind: MONITOR_FAILED_KIND, reason: SESSION_LIMIT_TEXT }
     }
     return this.launch(request)
   }
 
   list(sessionID: string): MonitorSummary[] {
-    const summaries: MonitorSummary[] = []
-
-    for (const [id, monitor] of this.running) {
-      if (monitor.request.sessionID === sessionID) {
-        summaries.push(summarize(id, monitor))
-      }
-    }
-    return summaries
+    return [...this.runningIn(sessionID).map(summarizeRunning), ...this.history.list(sessionID).map(summarizeFinished)]
   }
 
   stop(sessionID: string, id: string): MonitorStop {
@@ -57,28 +54,38 @@ export class MonitorRegistry implements Monitors {
     if (!monitor || monitor.request.sessionID !== sessionID) {
       return { kind: MONITOR_NOT_FOUND_KIND, id }
     }
-    this.halt(id, monitor)
-    return { kind: MONITOR_STOPPED_KIND, summary: summarize(id, monitor) }
+    this.halt(monitor)
+    return { kind: MONITOR_STOPPED_KIND, summary: this.retire(monitor, STATUS_STOPPED) }
   }
 
   stopSession(sessionID: string): void {
-    for (const [id, monitor] of this.running) {
-      if (monitor.request.sessionID === sessionID) {
-        this.halt(id, monitor)
-      }
+    for (const monitor of this.runningIn(sessionID)) {
+      this.halt(monitor)
     }
+    this.history.forget(sessionID)
   }
 
   stopAll(): void {
-    for (const [id, monitor] of this.running) {
-      this.halt(id, monitor)
+    for (const monitor of this.running.values()) {
+      this.halt(monitor)
     }
+    this.history.clear()
+  }
+
+  private runningIn(sessionID: string): RunningMonitor[] {
+    return Array.from(this.running.values()).filter((monitor) => monitor.request.sessionID === sessionID)
   }
 
   private launch(request: MonitorRequest): MonitorStart {
     const id = createMonitorId()
     const { sink, createNoticeId, launch } = this.dependencies
-    const channel = new NoticeChannel({ sink, createNoticeId, request, monitorId: id, onFlood: () => this.flood(id) })
+    const channel = new NoticeChannel({
+      sink,
+      createNoticeId,
+      request,
+      monitorId: id,
+      onFlood: () => this.endEarly(id, ENDING_FLOODED),
+    })
     const command = launch(
       { command: request.command, directory: request.directory },
       { onLine: (line) => channel.receiveLine(line), onExit: (exit) => this.finish(id, exit) },
@@ -87,23 +94,41 @@ export class MonitorRegistry implements Monitors {
     if (command.kind === COMMAND_FAILED_KIND) {
       return { kind: MONITOR_FAILED_KIND, reason: command.reason }
     }
-    const timer = setTimeout(() => command.stop(), MONITOR_TIMEOUT_MS)
-    this.running.set(id, { request, command, channel, timer, startedAt: new Date(), ending: ENDING_RUNNING })
-    return { kind: MONITOR_STARTED_KIND, id, pid: command.pid }
+    const monitor: RunningMonitor = { id, request, command, channel, startedAt: new Date(), ending: ENDING_RUNNING }
+    this.arm(monitor)
+    this.running.set(id, monitor)
+    return { kind: MONITOR_STARTED_KIND, summary: summarizeRunning(monitor) }
   }
 
-  private halt(id: string, monitor: RunningMonitor): void {
-    clearTimeout(monitor.timer)
+  private arm(monitor: RunningMonitor): void {
+    const { lifetime } = monitor.request
+
+    if (lifetime.kind === TIMED_LIFETIME_KIND) {
+      monitor.expiresAt = new Date(monitor.startedAt.getTime() + lifetime.timeoutMs)
+      monitor.deadline = new DeadlineTimer(monitor.expiresAt, () => this.endEarly(monitor.id, ENDING_EXPIRED))
+      monitor.deadline.start()
+    }
+  }
+
+  private halt(monitor: RunningMonitor): void {
+    monitor.deadline?.cancel()
     monitor.channel.close()
     monitor.command.stop()
-    this.running.delete(id)
+    this.running.delete(monitor.id)
   }
 
-  private flood(id: string): void {
+  private retire(monitor: RunningMonitor, status: MonitorStatus): MonitorSummary {
+    const finished = { monitor, status, endedAt: new Date() }
+
+    this.history.record(finished)
+    return summarizeFinished(finished)
+  }
+
+  private endEarly(id: string, ending: MonitorEnding): void {
     const monitor = this.running.get(id)
 
     if (monitor) {
-      monitor.ending = ENDING_FLOODED
+      monitor.ending = ending
       monitor.command.stop()
     }
   }
@@ -112,13 +137,11 @@ export class MonitorRegistry implements Monitors {
     const monitor = this.running.get(id)
 
     if (monitor) {
-      clearTimeout(monitor.timer)
+      const notice = endingNotice(monitor, exit)
+      monitor.deadline?.cancel()
       this.running.delete(id)
-      if (monitor.ending === ENDING_FLOODED) {
-        monitor.channel.end(FLOODED_TEXT, FLOODED_LABEL_SUFFIX)
-      } else {
-        monitor.channel.end(exitLine(exit), ENDED_LABEL_SUFFIX)
-      }
+      monitor.channel.end(notice.text, notice.labelSuffix)
+      this.retire(monitor, notice.status)
     }
   }
 }

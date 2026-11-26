@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest"
+import { describe, expect, test } from "vitest"
 import { compose } from "#monitor/composition"
 import {
   HOST_SESSION_ID,
@@ -9,6 +9,7 @@ import {
   startTool,
   startToolPid,
   toolCallContext,
+  waitForGroupExit,
 } from "../fixtures"
 
 async function listSessionMonitors(): Promise<void> {
@@ -55,7 +56,7 @@ async function stopDeletedSession(): Promise<void> {
   const pid = await startToolPid(host, "sleep 30 & sleep 30")
 
   host.event.emitDeleted(HOST_SESSION_ID)
-  await vi.waitFor(() => expect(isGroupAlive(pid)).toBe(false))
+  await waitForGroupExit(pid)
   cleanup()
 }
 
