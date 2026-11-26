@@ -20,24 +20,33 @@
   },
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/entry.ts"
+  },
+  "imports": {
+    "#monitor/*": "./src/*/index.ts"
   },
   "files": [
-    "src"
+    "src",
+    "!src/**/tests"
   ],
   "scripts": {
     "format": "biome check --write .",
-    "lint": "biome check .",
+    "lint": "biome ci .",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "validate": "npm run lint && npm run typecheck && npm test"
   },
   "peerDependencies": {
-    "@opencode/plugin": ">=2.4.1"
+    "@opencode/plugin": ">=2.4.1",
+    "@opencode/schema": ">=2.4.1",
+    "effect": "^4.0.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.9",
     "@opencode/plugin": "2.4.1",
+    "@opencode/schema": "^2.4.1",
     "@types/node": "24.19.4",
+    "effect": "4.1.0",
     "git-cliff": "2.14.2",
     "typescript": "7.0.2",
     "vitest": "5.1.2"

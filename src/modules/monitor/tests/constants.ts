@@ -1,0 +1,11 @@
+export const TEST_SESSION_ID = "ses_monitor_test"
+export const TEST_DESCRIPTION = "test output"
+export const TEST_LABEL = "monitor: test output"
+export const TEST_ENDED_LABEL = "monitor: test output (ended)"
+export const MISSING_DIRECTORY = "/nonexistent/opencode-monitor"
+export const LONG_RUNNING_GROUP = "sleep 30 & sleep 30"
+export const SETTLE_MS = 200
+export const PROBE_SIGNAL = 0
+export const TEST_NOTICE_ID_PREFIX = "msg_test_"
+export const OTHER_SESSION_ID = "ses_other_test"
+export const DELIVERY_REJECTION = "Expected a string starting with msg_"

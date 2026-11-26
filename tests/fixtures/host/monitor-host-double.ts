@@ -1,0 +1,49 @@
+import { AssertInput } from "@opencode/plugin/permission"
+import { Schema } from "effect"
+import {
+  type MonitorHost,
+  type MonitorLocationHost,
+  type MonitorPermissionHost,
+  type MonitorSessionHost,
+  type MonitorToolHost,
+  type PermissionRequest,
+  type SyntheticMessage,
+  type ToolTransformCallback,
+} from "#monitor/integration"
+import { PERMISSION_DENIED_TEXT } from "./constants"
+import { SYNTHETIC_MESSAGE } from "./schemas"
+import { ToolEditorDouble } from "./tool-editor-double"
+
+export class MonitorHostDouble implements MonitorHost {
+  readonly editor = new ToolEditorDouble()
+  readonly permissionRequests: PermissionRequest[] = []
+  readonly messages: SyntheticMessage[] = []
+  denyPermission = false
+
+  readonly tool: MonitorToolHost = {
+    transform: async (callback: ToolTransformCallback) => {
+      callback(this.editor)
+      return { dispose: async () => {} }
+    },
+  }
+
+  readonly permission: MonitorPermissionHost = {
+    assert: async (request: PermissionRequest) => {
+      Schema.decodeUnknownSync(AssertInput)(request)
+      this.permissionRequests.push(request)
+      if (this.denyPermission) {
+        throw new Error(PERMISSION_DENIED_TEXT)
+      }
+    },
+  }
+
+  readonly session: MonitorSessionHost = {
+    synthetic: async (message: SyntheticMessage) => {
+      const admitted = Schema.decodeUnknownSync(SYNTHETIC_MESSAGE)(message)
+      this.messages.push(message)
+      return { id: String(admitted.id) }
+    },
+  }
+
+  readonly location: MonitorLocationHost = { directory: process.cwd() }
+}

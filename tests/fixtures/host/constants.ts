@@ -1,0 +1,9 @@
+export const HOST_SESSION_ID = "ses_host_test"
+export const HOST_AGENT = "build"
+export const HOST_MESSAGE_ID = "msg_host_test"
+export const HOST_CALL_ID = "call_host_test"
+export const HOST_DESCRIPTION = "build log"
+export const MONITOR_START_TOOL = "monitor_start"
+export const PERMISSION_DENIED_TEXT = "permission denied by rule"
+export const SETTLE_MS = 200
+export const PROBE_SIGNAL = 0
