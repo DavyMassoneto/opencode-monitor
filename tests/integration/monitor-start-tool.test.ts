@@ -9,8 +9,10 @@ import {
   MONITOR_START_TOOL,
   MonitorHostDouble,
   PERMISSION_DENIED_TEXT,
+  registeredTool,
   settle,
   startToolPid,
+  toolCallContext,
 } from "../fixtures"
 
 function declarePluginId(): void {
@@ -86,6 +88,63 @@ function rejectEmptyCommand(): void {
   expect(() => decode({ command: "", description: "build log" })).toThrow()
 }
 
+function rejectInvalidPattern(): void {
+  const decode = Schema.decodeUnknownSync(MONITOR_START_INPUT)
+
+  expect(() => decode({ command: "true", description: "build log", pattern: "(unclosed" })).toThrow(
+    "a valid JavaScript regular expression",
+  )
+}
+
+function compileValidPattern(): void {
+  const input = Schema.decodeUnknownSync(MONITOR_START_INPUT)({
+    command: "true",
+    description: "build log",
+    pattern: "READY|ERROR",
+  })
+
+  expect(input.pattern?.test("ERROR now")).toBe(true)
+  expect(input.pattern?.test("waiting")).toBe(false)
+}
+
+function describePatternForModel(): void {
+  const { schema } = Schema.toJsonSchemaDocument(MONITOR_START_INPUT)
+
+  expect(schema).toMatchObject({
+    properties: {
+      pattern: {
+        type: "string",
+        minLength: 1,
+        description: expect.stringContaining("Match failure states as well as success"),
+      },
+    },
+  })
+  expect(JSON.stringify(schema)).not.toContain('"null"')
+}
+
+function rejectNullPattern(): void {
+  const decode = Schema.decodeUnknownSync(MONITOR_START_INPUT)
+
+  expect(() => decode({ command: "true", description: "build log", pattern: null })).toThrow()
+}
+
+async function filterThroughTool(): Promise<void> {
+  const host = new MonitorHostDouble()
+
+  await compose(host)
+  await registeredTool(host, MONITOR_START_TOOL).execute(
+    Schema.decodeUnknownSync(MONITOR_START_INPUT)({
+      command: "printf 'noise\\nREADY\\n'",
+      description: "build log",
+      pattern: "READY",
+    }),
+    toolCallContext(),
+  )
+  await vi.waitFor(() => expect(host.messages).toHaveLength(2))
+  expect(host.messages[0]?.text).toContain("\nREADY\n")
+  expect(host.messages[0]?.text).not.toContain("noise")
+}
+
 async function stopMonitorsOnCleanup(): Promise<void> {
   const host = new MonitorHostDouble()
   const cleanup = await compose(host)
@@ -104,6 +163,11 @@ function registerTests(): void {
   test("entrega com ids de mensagem do OpenCode em ordem crescente", useOpenCodeMessageIds)
   test("o host substituto recusa id de mensagem fora do formato do OpenCode", rejectForeignMessageId)
   test("recusa comando vazio na entrada da ferramenta", rejectEmptyCommand)
+  test("recusa padrão que não é expressão regular válida", rejectInvalidPattern)
+  test("compila o padrão válido na entrada da ferramenta", compileValidPattern)
+  test("anuncia o padrão ao modelo como texto descrito, sem null", describePatternForModel)
+  test("recusa padrão nulo", rejectNullPattern)
+  test("filtra as linhas pelo padrão recebido na ferramenta", filterThroughTool)
   test("encerra os monitores na limpeza do plugin", stopMonitorsOnCleanup)
 }
 

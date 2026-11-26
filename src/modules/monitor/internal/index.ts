@@ -1,2 +1,6 @@
 export * from "./command-port"
+export * from "./flood-detection"
+export * from "./line-batching"
+export * from "./line-cleaning"
 export * from "./registry"
+export * from "./secret-redaction"

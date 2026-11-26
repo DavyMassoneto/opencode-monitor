@@ -3,6 +3,7 @@ export interface MonitorRequest {
   command: string
   description: string
   directory: string
+  pattern?: RegExp
 }
 
 export interface MonitorStarted {

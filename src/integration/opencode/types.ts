@@ -50,3 +50,7 @@ export interface MonitorCallContext {
 export interface MonitorToolResult {
   content: string
 }
+
+export interface MonitorPattern {
+  pattern?: RegExp
+}

@@ -2,71 +2,147 @@ import {
   DELIVERY_FAILED_KIND,
   DELIVERY_HEALTHY_KIND,
   type DeliveryState,
-  type MonitorRequest,
   type Notice,
-  type NoticeIdFactory,
-  type NoticeSink,
 } from "#monitor/modules/monitor/public/contracts"
-import { type CommandExit } from "../command-port"
-import { NOTICE_ENDED_SUFFIX, NOTICE_LABEL_PREFIX } from "./constants"
-import { exitLine } from "./exit-line"
+import { FloodMeter } from "../flood-detection"
+import { LineBatch } from "../line-batching"
+import { cleanLine } from "../line-cleaning"
+import { redactSecrets } from "../secret-redaction"
+import { NOTICE_LABEL_PREFIX, NOTICE_LINE_COUNT_CLOSING, NOTICE_LINE_COUNT_OPENING } from "./constants"
+import { type ChannelSetup } from "./types"
 import { writeNotice } from "./write-notice"
 
 export class NoticeChannel {
-  private readonly sink: NoticeSink
-  private readonly createNoticeId: NoticeIdFactory
-  private readonly request: MonitorRequest
-  private readonly monitorId: string
+  private readonly setup: ChannelSetup
+  private readonly batch = new LineBatch()
+  private readonly flood = new FloodMeter()
   private sequence = 0
   private pending: Promise<void> = Promise.resolve()
-  private open = true
+  private delivering = false
+  private flushDue = false
+  private scheduled = false
+  private timer?: NodeJS.Timeout
+  private accepting = true
+  private silenced = false
   private state: DeliveryState = { kind: DELIVERY_HEALTHY_KIND }
 
-  constructor(sink: NoticeSink, createNoticeId: NoticeIdFactory, request: MonitorRequest, monitorId: string) {
-    this.sink = sink
-    this.createNoticeId = createNoticeId
-    this.request = request
-    this.monitorId = monitorId
+  constructor(setup: ChannelSetup) {
+    this.setup = setup
   }
 
   get delivery(): DeliveryState {
     return this.state
   }
 
-  sendLine(line: string): void {
-    this.send(line, `${NOTICE_LABEL_PREFIX}${this.request.description}`)
-  }
+  receiveLine(raw: string): void {
+    const line = cleanLine(raw)
 
-  sendExit(exit: CommandExit): void {
-    this.send(exitLine(exit), `${NOTICE_LABEL_PREFIX}${this.request.description}${NOTICE_ENDED_SUFFIX}`)
-  }
-
-  close(): void {
-    this.open = false
-  }
-
-  private send(line: string, label: string): void {
-    if (this.open) {
-      this.sequence += 1
-      const notice = this.notice(line, label)
-      this.pending = this.pending
-        .then(() => this.sink.deliver(notice))
-        .catch((error: Error) => {
-          this.state = { kind: DELIVERY_FAILED_KIND, noticeId: notice.id, reason: error.message }
-        })
+    if (this.accepting && this.isWanted(line)) {
+      const now = Date.now()
+      if (this.flood.record(now)) {
+        this.accepting = false
+        this.setup.onFlood()
+      } else {
+        this.batch.add(redactSecrets(line), now)
+        this.schedule(now)
+      }
     }
   }
 
-  private notice(line: string, label: string): Notice {
-    const header = { monitorId: this.monitorId, sequence: this.sequence, description: this.request.description }
+  private isWanted(line: string): boolean {
+    const { pattern } = this.setup.request
+
+    return !pattern || pattern.test(line)
+  }
+
+  end(line: string, labelSuffix: string): void {
+    this.accepting = false
+    this.cancelTimer()
+    this.flushBatch()
+    this.enqueue([line], 0, `${NOTICE_LABEL_PREFIX}${this.setup.request.description}${labelSuffix}`)
+  }
+
+  close(): void {
+    this.accepting = false
+    this.silenced = true
+    this.cancelTimer()
+  }
+
+  private schedule(now: number): void {
+    if (!this.scheduled) {
+      this.scheduled = true
+      this.timer = setTimeout(() => this.onDeadline(), this.batch.deadline() - now)
+    }
+  }
+
+  private onDeadline(): void {
+    const now = Date.now()
+
+    this.scheduled = false
+    if (this.batch.deadline() > now) {
+      this.schedule(now)
+    } else if (this.delivering) {
+      this.flushDue = true
+    } else {
+      this.flushBatch()
+    }
+  }
+
+  private cancelTimer(): void {
+    clearTimeout(this.timer)
+    this.scheduled = false
+  }
+
+  private flushBatch(): void {
+    if (this.batch.hasLines()) {
+      const content = this.batch.take()
+      const count = content.lines.length + content.omitted
+      this.enqueue(content.lines, content.omitted, this.batchLabel(count))
+    }
+  }
+
+  private batchLabel(count: number): string {
+    const label = `${NOTICE_LABEL_PREFIX}${this.setup.request.description}`
+
+    if (count > 1) {
+      return `${label}${NOTICE_LINE_COUNT_OPENING}${count}${NOTICE_LINE_COUNT_CLOSING}`
+    }
+    return label
+  }
+
+  private enqueue(lines: readonly string[], omitted: number, label: string): void {
+    if (!this.silenced) {
+      this.sequence += 1
+      const notice = this.notice(lines, omitted, label)
+      this.delivering = true
+      this.pending = this.pending
+        .then(() => this.setup.sink.deliver(notice))
+        .catch((error: Error) => {
+          this.state = { kind: DELIVERY_FAILED_KIND, noticeId: notice.id, reason: error.message }
+        })
+        .finally(() => this.afterDelivery())
+    }
+  }
+
+  private afterDelivery(): void {
+    this.delivering = false
+    if (this.flushDue) {
+      this.flushDue = false
+      this.flushBatch()
+    }
+  }
+
+  private notice(lines: readonly string[], omitted: number, label: string): Notice {
+    const { request, monitorId } = this.setup
+    const header = { monitorId, sequence: this.sequence, description: request.description }
 
     return {
-      sessionID: this.request.sessionID,
-      id: this.createNoticeId(),
-      monitorId: this.monitorId,
+      sessionID: request.sessionID,
+      id: this.setup.createNoticeId(),
+      monitorId,
       sequence: this.sequence,
       label,
-      text: writeNotice(header, [line]),
+      text: writeNotice(header, lines, omitted),
     }
   }
 }

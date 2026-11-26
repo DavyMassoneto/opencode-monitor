@@ -8,9 +8,12 @@ export interface RegistryDependencies {
   launch: CommandLauncher
 }
 
+export type MonitorEnding = "running" | "flooded"
+
 export interface RunningMonitor {
   request: MonitorRequest
   command: LaunchedCommand
   channel: NoticeChannel
   timer: NodeJS.Timeout
+  ending: MonitorEnding
 }

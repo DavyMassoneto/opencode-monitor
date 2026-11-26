@@ -6,9 +6,8 @@ async function deliverLinesInOrder(): Promise<void> {
   const sut = makeMonitorSut()
 
   startedPid(sut, "printf 'first\\nsecond\\n'")
-  await vi.waitFor(() => expect(sut.sink.notices).toHaveLength(3))
-  expect(sut.sink.notices[0]?.text).toContain("\nfirst\n")
-  expect(sut.sink.notices[1]?.text).toContain("\nsecond\n")
+  await vi.waitFor(() => expect(sut.sink.notices).toHaveLength(2))
+  expect(sut.sink.notices[0]?.text).toContain("\nfirst\nsecond\n")
 }
 
 async function labelLineNotices(): Promise<void> {
@@ -31,7 +30,7 @@ async function escapeCommandOutput(): Promise<void> {
 async function takeIdsFromFactory(): Promise<void> {
   const sut = makeMonitorSut()
 
-  startedPid(sut, "printf 'a\\nb\\n'")
+  startedPid(sut, "echo a; sleep 0.4; echo b")
   await vi.waitFor(() => expect(sut.sink.notices).toHaveLength(3))
   expect(sut.sink.notices.map((notice) => notice.id)).toEqual(["msg_test_1", "msg_test_2", "msg_test_3"])
 }

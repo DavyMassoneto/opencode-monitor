@@ -7,8 +7,15 @@ import {
   type Monitors,
 } from "#monitor/modules/monitor/public/contracts"
 import { COMMAND_FAILED_KIND, type CommandExit } from "../command-port"
-import { NoticeChannel } from "../notice"
-import { MONITOR_TIMEOUT_MS } from "./constants"
+import { exitLine, NoticeChannel } from "../notice"
+import {
+  ENDED_LABEL_SUFFIX,
+  ENDING_FLOODED,
+  ENDING_RUNNING,
+  FLOODED_LABEL_SUFFIX,
+  FLOODED_TEXT,
+  MONITOR_TIMEOUT_MS,
+} from "./constants"
 import { createMonitorId } from "./monitor-id"
 import { type RegistryDependencies, type RunningMonitor } from "./types"
 
@@ -22,17 +29,18 @@ export class MonitorRegistry implements Monitors {
 
   start(request: MonitorRequest): MonitorStart {
     const id = createMonitorId()
-    const channel = new NoticeChannel(this.dependencies.sink, this.dependencies.createNoticeId, request, id)
-    const command = this.dependencies.launch(
+    const { sink, createNoticeId, launch } = this.dependencies
+    const channel = new NoticeChannel({ sink, createNoticeId, request, monitorId: id, onFlood: () => this.flood(id) })
+    const command = launch(
       { command: request.command, directory: request.directory },
-      { onLine: (line) => channel.sendLine(line), onExit: (exit) => this.finish(id, exit) },
+      { onLine: (line) => channel.receiveLine(line), onExit: (exit) => this.finish(id, exit) },
     )
 
     if (command.kind === COMMAND_FAILED_KIND) {
       return { kind: MONITOR_FAILED_KIND, reason: command.reason }
     }
     const timer = setTimeout(() => command.stop(), MONITOR_TIMEOUT_MS)
-    this.running.set(id, { request, command, channel, timer })
+    this.running.set(id, { request, command, channel, timer, ending: ENDING_RUNNING })
     return { kind: MONITOR_STARTED_KIND, id, pid: command.pid }
   }
 
@@ -62,13 +70,26 @@ export class MonitorRegistry implements Monitors {
     this.running.clear()
   }
 
+  private flood(id: string): void {
+    const monitor = this.running.get(id)
+
+    if (monitor) {
+      monitor.ending = ENDING_FLOODED
+      monitor.command.stop()
+    }
+  }
+
   private finish(id: string, exit: CommandExit): void {
     const monitor = this.running.get(id)
 
     if (monitor) {
       clearTimeout(monitor.timer)
       this.running.delete(id)
-      monitor.channel.sendExit(exit)
+      if (monitor.ending === ENDING_FLOODED) {
+        monitor.channel.end(FLOODED_TEXT, FLOODED_LABEL_SUFFIX)
+      } else {
+        monitor.channel.end(exitLine(exit), ENDED_LABEL_SUFFIX)
+      }
     }
   }
 }
