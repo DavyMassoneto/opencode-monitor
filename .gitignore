@@ -65,3 +65,6 @@ temp/
 
 # Git worktrees
 .worktrees/
+
+# Local OpenCode configuration
+.opencode/

@@ -2,7 +2,7 @@
 
 Monitor tool for OpenCode v2: watch a background command and wake the agent with a notification on each matching line.
 
-Status: in development. The plan is in [DOCS/ESPECIFICACAO.md](DOCS/ESPECIFICACAO.md).
+Status: in development. The plan is in [docs/especificacao.md](docs/especificacao.md); the architecture is in [docs/architecture.md](docs/architecture.md) and the rules in [AGENTS.md](AGENTS.md).
 
 ## Install
 

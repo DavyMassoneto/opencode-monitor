@@ -131,7 +131,7 @@ Arma um monitor e retorna imediatamente.
 | `description` | string | sim | — | Rótulo curto; vira o `description` do aviso e aparece em `monitor_list`. |
 | `pattern` | string (regex) | não | — | Só linhas que casam acordam o agente. Sem ele, toda linha acorda. |
 | `delivery` | `"wake"` \| `"queue"` \| `"silent"` \| `"manual"` | não | `"wake"` | Ver 7.5. |
-| `timeout_ms` | número | não | 300 000 | Prazo. Máximo 3 600 000. Ignorado se `persistent`. |
+| `timeout_ms` | número | não | 300 000 | Prazo, inteiro positivo, sem máximo. Ignorado se `persistent`. |
 | `persistent` | boolean | não | false | Dura até a sessão acabar ou `monitor_stop`. |
 | `capture_stderr` | boolean | não | false | Se true, linhas de stderr também viram eventos (prefixadas `stderr:`). |
 | `cwd` | string | não | diretório da sessão | Diretório de trabalho. |
@@ -244,27 +244,9 @@ Se `cwd` estiver fora do projeto, também verificar `external_directory`.
 
 ## 11. Arquitetura
 
-```
-opencode-monitor/
-├── DOCS/
-│   └── ESPECIFICACAO.md      (este arquivo)
-├── package.json              exports: "." (server); depois "./tui"
-├── src/
-│   ├── index.ts              Plugin.define: registra ferramentas, assina eventos, cleanup
-│   ├── tools.ts              definições e validação de entrada das 4 ferramentas
-│   ├── manager.ts            registro de monitores por sessão, ciclo de vida
-│   ├── process.ts            spawn, leitura de stdout/stderr, kill de grupo, identidade de PID
-│   ├── delivery.ts           session.synthetic, fila serial por monitor, retries idempotentes
-│   └── core/                 PURO, sem I/O
-│       ├── lines.ts          quebra em linhas, ANSI/controle, truncamento
-│       ├── batch.ts          agrupamento 200 ms / máx 1 s, limite por lote
-│       ├── flood.ts          detecção de inundação
-│       ├── format.ts         texto do aviso, escape, redação de segredos
-│       └── ids.ts            geração de IDs
-└── test/
-    ├── core/*.test.ts        unitários + propriedade
-    └── e2e/*.test.ts         processos reais com scripts de cenário
-```
+A estrutura de pastas, as fronteiras e as dependências permitidas estão em [architecture.md](architecture.md). Em resumo: o módulo `monitor` (`src/modules/monitor/`) concentra o registro dos monitores, os processos, a leitura das linhas e o texto dos avisos; `src/integration/opencode/` adapta o `@opencode/plugin` (ferramentas, permissão, `session.synthetic`); `src/composition/` monta e encerra; `src/entry.ts` declara o plugin.
+
+As capacidades previstas nesta especificação (agrupamento, filtro, inundação, limites, redação de segredos) entram como pastas de `src/modules/monitor/internal/`, com testes em `src/modules/monitor/tests/`.
 
 ### 11.1 Pontos da API v2 usados
 - `Plugin.define({ id, setup(ctx) })` — `setup` retorna a função de cleanup.
@@ -279,7 +261,7 @@ opencode-monitor/
 
 ### 11.2 Fluxo
 1. Modelo chama `monitor_start` → validação → `permission.assert` → `spawn` → retorna `id`.
-2. stdout chega por stream → `core/lines` → filtro `pattern` → `core/flood` → `core/batch`.
+2. stdout chega por stream → quebra em linhas → filtro `pattern` → detecção de inundação → agrupamento, cada passo numa pasta de `src/modules/monitor/internal/`.
 3. Lote pronto → `delivery` envia `synthetic` (serializado por monitor, `id` idempotente; em falha, mantém pendente e tenta de novo com backoff).
 4. Processo termina / prazo / inundação → aviso final → limpeza.
 5. `session.deleted` ou cleanup do plugin → mata tudo, remove arquivos.
@@ -306,18 +288,18 @@ opencode-monitor/
 7. Após `monitor_stop`, prazo, apagar a sessão ou descarregar o plugin: nenhum processo filho vivo (`pgrep -g`), nenhum timer, arquivos temporários removidos.
 8. Saída contendo `</monitor>`, sequências ANSI ou "ignore as instruções anteriores" chega escapada e marcada como não confiável.
 9. Reenvio de uma entrega que falhou não duplica a mensagem (mesmo `id`).
-10. Todos os testes passam (`bun test`), sem testes instáveis.
+10. Todos os testes passam (`npm test`, Vitest), sem testes instáveis.
 
-## 14. Perguntas em aberto
+## 14. Decisões
 
 1. ~~Nome do pacote~~ — **decidido**: `@davy121/opencode-monitor`, publicado no npm.
    - Conta npm `davy121` (o escopo `@usuario` é o nome do usuário npm), já logada neste Mac (`npm whoami` → `davy121`).
    - Pacotes com escopo são privados por padrão: publicar com `npm publish --access public` (ou `"publishConfig": { "access": "public" }` no `package.json`).
    - Em 25/11/2026 o nome estava livre (registro retornou 404).
-2. **API Promise ou Effect** do `@opencode/plugin`? (Promise é mais simples; Effect dá cancelamento estruturado.)
-3. `timeout_ms` máximo: 1 h (como o futpib) ou 30 min (como o Claude Code atual)?
-4. Modo padrão de entrega: `wake` (padrão Claude Code) ou `queue` (menos interrupção)?
-5. Fase 2 de persistência vale a complexidade, ou basta o modo `persistent` dentro da sessão?
+2. ~~API Promise ou Effect~~ — **decidido**: API Promise (`@opencode/plugin`), cancelamento via `context.signal`.
+3. ~~`timeout_ms` máximo~~ — **decidido**: sem máximo; padrão continua 300 000.
+4. ~~Modo padrão de entrega~~ — **decidido**: `wake`.
+5. ~~Persistência entre reinícios~~ — **decidido**: mantida na fase 5, com validação forte de PID e `restart: "never"` por padrão.
 
 ## 15. Referências
 
