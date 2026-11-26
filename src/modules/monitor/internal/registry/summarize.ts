@@ -21,6 +21,7 @@ function baseSummary(monitor: RunningMonitor, status: MonitorStatus): MonitorSum
     command: monitor.request.command,
     pid: monitor.command.pid,
     status,
+    mode: monitor.request.mode,
     startedAt: monitor.startedAt.toISOString(),
     lines: monitor.channel.lines,
     delivery: monitor.channel.delivery,

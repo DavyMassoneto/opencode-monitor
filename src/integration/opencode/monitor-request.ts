@@ -1,10 +1,11 @@
 import {
+  type DeliveryMode,
   type MonitorLifetime,
   type MonitorRequest,
   PERSISTENT_LIFETIME_KIND,
   TIMED_LIFETIME_KIND,
 } from "#monitor/modules"
-import { DEFAULT_TIMEOUT_MS } from "./constants"
+import { DEFAULT_DELIVERY_MODE, DEFAULT_TIMEOUT_MS } from "./constants"
 import { type MonitorCallContext, type MonitorStartInput } from "./types"
 
 export function monitorRequest(
@@ -18,6 +19,7 @@ export function monitorRequest(
     description: input.description,
     directory,
     lifetime: lifetimeOf(input),
+    mode: modeOf(input),
   }
 
   if (input.pattern) {
@@ -34,4 +36,11 @@ function lifetimeOf(input: MonitorStartInput): MonitorLifetime {
     return { kind: TIMED_LIFETIME_KIND, timeoutMs: input.timeout_ms }
   }
   return { kind: TIMED_LIFETIME_KIND, timeoutMs: DEFAULT_TIMEOUT_MS }
+}
+
+function modeOf(input: MonitorStartInput): DeliveryMode {
+  if (input.delivery) {
+    return input.delivery
+  }
+  return DEFAULT_DELIVERY_MODE
 }

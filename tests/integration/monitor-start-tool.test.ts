@@ -23,7 +23,12 @@ async function registerMonitorTools(): Promise<void> {
   const host = new MonitorHostDouble()
 
   await compose(host)
-  expect(host.editor.tools.map((tool) => tool.id)).toEqual([MONITOR_START_TOOL, "monitor_list", "monitor_stop"])
+  expect(host.editor.tools.map((tool) => tool.id)).toEqual([
+    MONITOR_START_TOOL,
+    "monitor_list",
+    "monitor_stop",
+    "monitor_fetch",
+  ])
 }
 
 async function askShellPermission(): Promise<void> {
@@ -156,7 +161,7 @@ async function stopMonitorsOnCleanup(): Promise<void> {
 
 function registerTests(): void {
   test("declara o plugin com o id do pacote", declarePluginId)
-  test("registra as ferramentas monitor_start, monitor_list e monitor_stop", registerMonitorTools)
+  test("registra as ferramentas monitor_start, monitor_list, monitor_stop e monitor_fetch", registerMonitorTools)
   test("pede permissão de shell para o comando antes de executar", askShellPermission)
   test("não executa o comando quando a permissão é negada", skipCommandWhenDenied)
   test("entrega a linha por mensagem sintética que acorda a sessão", wakeSessionWithSynthetic)

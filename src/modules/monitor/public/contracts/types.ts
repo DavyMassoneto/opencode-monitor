@@ -9,12 +9,15 @@ export interface PersistentLifetime {
 
 export type MonitorLifetime = TimedLifetime | PersistentLifetime
 
+export type DeliveryMode = "wake" | "queue" | "silent" | "manual"
+
 export interface MonitorRequest {
   sessionID: string
   command: string
   description: string
   directory: string
   lifetime: MonitorLifetime
+  mode: DeliveryMode
   pattern?: RegExp
 }
 
@@ -32,6 +35,7 @@ export type MonitorStart = MonitorStarted | MonitorFailed
 
 export interface Notice {
   sessionID: string
+  mode: DeliveryMode
   id: string
   monitorId: string
   sequence: number
@@ -60,6 +64,8 @@ export type DeliveryState = DeliveryHealthy | DeliveryFailed
 export interface LineCounts {
   received: number
   delivered: number
+  pending: number
+  dropped: number
   last?: string
 }
 
@@ -71,6 +77,7 @@ export interface MonitorSummary {
   command: string
   pid: number
   status: MonitorStatus
+  mode: DeliveryMode
   startedAt: string
   expiresAt?: string
   endedAt?: string
@@ -90,10 +97,30 @@ export interface MonitorNotFound {
 
 export type MonitorStop = MonitorStopped | MonitorNotFound
 
+export interface FetchRequest {
+  sessionID: string
+  peek: boolean
+  id?: string
+}
+
+export interface PendingLines {
+  id: string
+  lines: string[]
+  dropped: number
+}
+
+export interface LinesFetched {
+  kind: "fetched"
+  monitors: PendingLines[]
+}
+
+export type MonitorFetch = LinesFetched | MonitorNotFound
+
 export interface Monitors {
   start(request: MonitorRequest): MonitorStart
   list(sessionID: string): MonitorSummary[]
   stop(sessionID: string, id: string): MonitorStop
+  fetch(request: FetchRequest): MonitorFetch
   stopSession(sessionID: string): void
   stopAll(): void
 }

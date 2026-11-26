@@ -3,19 +3,21 @@ import {
   DELIVERY_HEALTHY_KIND,
   type DeliveryState,
   type LineCounts,
+  MODE_MANUAL,
   type Notice,
 } from "#monitor/modules/monitor/public/contracts"
 import { FloodMeter } from "../flood-detection"
-import { LineBatch } from "../line-batching"
+import { BATCH_MAX_LINES, type BatchContent, LineBatch, PENDING_MAX_LINES } from "../line-batching"
 import { cleanLine } from "../line-cleaning"
 import { redactSecrets } from "../secret-redaction"
 import { NOTICE_LABEL_PREFIX, NOTICE_LINE_COUNT_CLOSING, NOTICE_LINE_COUNT_OPENING } from "./constants"
-import { type ChannelSetup } from "./types"
+import { type ChannelCounts, type ChannelSetup } from "./types"
 import { writeNotice } from "./write-notice"
 
 export class NoticeChannel {
   private readonly setup: ChannelSetup
-  private readonly batch = new LineBatch()
+  private readonly manual: boolean
+  private readonly batch: LineBatch
   private readonly flood = new FloodMeter()
   private sequence = 0
   private pending: Promise<void> = Promise.resolve()
@@ -26,10 +28,12 @@ export class NoticeChannel {
   private accepting = true
   private silenced = false
   private state: DeliveryState = { kind: DELIVERY_HEALTHY_KIND }
-  private readonly counts: LineCounts = { received: 0, delivered: 0 }
+  private readonly counts: ChannelCounts = { received: 0, delivered: 0, dropped: 0 }
 
   constructor(setup: ChannelSetup) {
     this.setup = setup
+    this.manual = setup.request.mode === MODE_MANUAL
+    this.batch = new LineBatch(this.manual ? PENDING_MAX_LINES : BATCH_MAX_LINES)
   }
 
   get delivery(): DeliveryState {
@@ -37,7 +41,16 @@ export class NoticeChannel {
   }
 
   get lines(): LineCounts {
-    return { ...this.counts }
+    return { ...this.counts, pending: this.batch.size, dropped: this.counts.dropped + this.batch.dropped }
+  }
+
+  fetch(peek: boolean): BatchContent {
+    if (peek) {
+      return this.batch.peek()
+    }
+    const content = this.batch.take()
+    this.counts.dropped += content.omitted
+    return content
   }
 
   receiveLine(raw: string): void {
@@ -52,7 +65,9 @@ export class NoticeChannel {
       } else {
         this.counts.last = redactSecrets(line)
         this.batch.add(this.counts.last, now)
-        this.schedule(now)
+        if (!this.manual) {
+          this.schedule(now)
+        }
       }
     }
   }
@@ -66,8 +81,10 @@ export class NoticeChannel {
   end(line: string, labelSuffix: string): void {
     this.accepting = false
     this.cancelTimer()
-    this.flushBatch()
-    this.enqueue([line], 0, `${NOTICE_LABEL_PREFIX}${this.setup.request.description}${labelSuffix}`, 0)
+    if (!this.manual) {
+      this.flushBatch()
+      this.enqueue([line], 0, `${NOTICE_LABEL_PREFIX}${this.setup.request.description}${labelSuffix}`, 0)
+    }
   }
 
   close(): void {
@@ -105,6 +122,7 @@ export class NoticeChannel {
     if (this.batch.hasLines()) {
       const content = this.batch.take()
       const count = content.lines.length + content.omitted
+      this.counts.dropped += content.omitted
       this.enqueue(content.lines, content.omitted, this.batchLabel(count), content.lines.length)
     }
   }
@@ -149,6 +167,7 @@ export class NoticeChannel {
 
     return {
       sessionID: request.sessionID,
+      mode: request.mode,
       id: this.setup.createNoticeId(),
       monitorId,
       sequence: this.sequence,

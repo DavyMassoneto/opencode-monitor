@@ -29,6 +29,7 @@ export function monitorRequest(command: string): MonitorRequest {
     description: TEST_DESCRIPTION,
     directory: process.cwd(),
     lifetime: { kind: "timed", timeoutMs: TEST_TIMEOUT_MS },
+    mode: "wake",
   }
 }
 
@@ -68,4 +69,8 @@ export function timedRequest(command: string, timeoutMs: number): MonitorRequest
 
 export async function waitForGroupExit(pid: number): Promise<void> {
   await vi.waitFor(() => expect(isGroupAlive(pid)).toBe(false), { timeout: GROUP_EXIT_TIMEOUT_MS })
+}
+
+export function manualRequest(command: string): MonitorRequest {
+  return { ...monitorRequest(command), mode: "manual" }
 }

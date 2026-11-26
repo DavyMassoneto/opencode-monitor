@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest"
 import { TEST_LABEL, TEST_SESSION_ID } from "./constants"
-import { makeMonitorSut, startedPid } from "./support"
+import { makeMonitorSut, monitorRequest, startedPid } from "./support"
 
 async function deliverLinesInOrder(): Promise<void> {
   const sut = makeMonitorSut()
@@ -51,6 +51,14 @@ async function ignoreStderr(): Promise<void> {
   expect(sut.sink.notices[0]?.text).not.toContain("hidden")
 }
 
+async function tagNoticesWithMode(): Promise<void> {
+  const sut = makeMonitorSut()
+
+  sut.monitors.start({ ...monitorRequest("echo ready"), mode: "queue" })
+  await vi.waitFor(() => expect(sut.sink.notices).toHaveLength(2))
+  expect(sut.sink.notices.map((notice) => notice.mode)).toEqual(["queue", "queue"])
+}
+
 function registerTests(): void {
   test("entrega cada linha da saída como aviso, na ordem", deliverLinesInOrder)
   test("rotula o aviso de linha com a descrição e a sessão", labelLineNotices)
@@ -58,6 +66,7 @@ function registerTests(): void {
   test("dá a cada aviso um id novo da fábrica de ids", takeIdsFromFactory)
   test("entrega a última linha mesmo sem quebra de linha final", deliverUnterminatedLastLine)
   test("não transforma stderr em aviso", ignoreStderr)
+  test("marca cada aviso com o modo de entrega do monitor", tagNoticesWithMode)
 }
 
 describe("avisos de linha do monitor", registerTests)

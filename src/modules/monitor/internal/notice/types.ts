@@ -15,3 +15,10 @@ export interface ChannelSetup {
   monitorId: string
   onFlood: FloodHandler
 }
+
+export interface ChannelCounts {
+  received: number
+  delivered: number
+  dropped: number
+  last?: string
+}

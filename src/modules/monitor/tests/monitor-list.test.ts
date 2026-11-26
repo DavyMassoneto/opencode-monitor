@@ -41,7 +41,13 @@ async function countLines(): Promise<void> {
   sut.monitors.start({ ...monitorRequest(`echo skip; echo ERROR one; ${LONG_RUNNING_GROUP}`), pattern: /ERROR/ })
   await vi.waitFor(() => expect(sut.sink.notices).toHaveLength(1))
   await vi.waitFor(() =>
-    expect(sut.monitors.list(TEST_SESSION_ID)[0]?.lines).toEqual({ received: 2, delivered: 1, last: "ERROR one" }),
+    expect(sut.monitors.list(TEST_SESSION_ID)[0]?.lines).toEqual({
+      received: 2,
+      delivered: 1,
+      pending: 0,
+      dropped: 0,
+      last: "ERROR one",
+    }),
   )
   sut.monitors.stopAll()
 }

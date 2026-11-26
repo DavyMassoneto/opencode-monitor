@@ -1,8 +1,11 @@
 import {
+  type FetchRequest,
+  LINES_FETCHED_KIND,
   MONITOR_FAILED_KIND,
   MONITOR_NOT_FOUND_KIND,
   MONITOR_STARTED_KIND,
   MONITOR_STOPPED_KIND,
+  type MonitorFetch,
   type MonitorRequest,
   type MonitorStart,
   type MonitorStatus,
@@ -25,6 +28,7 @@ import {
 import { endingNotice } from "./ending-notice"
 import { MonitorHistory } from "./monitor-history"
 import { createMonitorId } from "./monitor-id"
+import { pendingOf } from "./pending-of"
 import { summarizeFinished, summarizeRunning } from "./summarize"
 import { type MonitorEnding, type RegistryDependencies, type RunningMonitor } from "./types"
 
@@ -58,6 +62,23 @@ export class MonitorRegistry implements Monitors {
     return { kind: MONITOR_STOPPED_KIND, summary: this.retire(monitor, STATUS_STOPPED) }
   }
 
+  fetch(request: FetchRequest): MonitorFetch {
+    const monitors = this.knownIn(request.sessionID)
+
+    if (request.id) {
+      const monitor = monitors.find((candidate) => candidate.id === request.id)
+      if (!monitor) {
+        return { kind: MONITOR_NOT_FOUND_KIND, id: request.id }
+      }
+      return { kind: LINES_FETCHED_KIND, monitors: [pendingOf(monitor, request.peek)] }
+    }
+    const fetched = monitors.map((monitor) => pendingOf(monitor, request.peek))
+    return {
+      kind: LINES_FETCHED_KIND,
+      monitors: fetched.filter((pending) => pending.lines.length > 0 || pending.dropped > 0),
+    }
+  }
+
   stopSession(sessionID: string): void {
     for (const monitor of this.runningIn(sessionID)) {
       this.halt(monitor)
@@ -70,6 +91,10 @@ export class MonitorRegistry implements Monitors {
       this.halt(monitor)
     }
     this.history.clear()
+  }
+
+  private knownIn(sessionID: string): RunningMonitor[] {
+    return [...this.runningIn(sessionID), ...this.history.list(sessionID).map((finished) => finished.monitor)]
   }
 
   private runningIn(sessionID: string): RunningMonitor[] {

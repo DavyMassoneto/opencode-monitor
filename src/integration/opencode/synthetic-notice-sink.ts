@@ -1,5 +1,5 @@
 import { type Notice, type NoticeSink } from "#monitor/modules"
-import { NOTICE_DELIVERY } from "./constants"
+import { MODE_OPTIONS } from "./constants"
 import { type MonitorSessionHost } from "./types"
 
 export class SyntheticNoticeSink implements NoticeSink {
@@ -15,8 +15,7 @@ export class SyntheticNoticeSink implements NoticeSink {
       id: notice.id,
       text: notice.text,
       description: notice.label,
-      delivery: NOTICE_DELIVERY,
-      resume: true,
+      ...MODE_OPTIONS[notice.mode],
       metadata: { monitorId: notice.monitorId, sequence: notice.sequence },
     })
   }

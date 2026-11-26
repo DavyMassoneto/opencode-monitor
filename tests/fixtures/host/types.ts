@@ -1,4 +1,4 @@
-import { type ToolTransformCallback } from "#monitor/integration"
+import { type SyntheticMessage, type ToolTransformCallback } from "#monitor/integration"
 import { type STARTED_SUMMARY } from "./schemas"
 
 export type ToolEditor = Parameters<ToolTransformCallback>[0]
@@ -16,4 +16,7 @@ export type StartedToolResult = typeof STARTED_SUMMARY.Type
 export interface StartOverrides {
   timeout_ms?: number
   persistent?: boolean
+  delivery?: string
 }
+
+export type DeliveredOptions = Pick<SyntheticMessage, "delivery" | "resume">

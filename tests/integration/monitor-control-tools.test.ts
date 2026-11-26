@@ -23,7 +23,7 @@ async function listSessionMonitors(): Promise<void> {
       id,
       command: "sleep 30",
       description: "build log",
-      lines: { received: 0, delivered: 0 },
+      lines: { received: 0, delivered: 0, pending: 0, dropped: 0 },
     }),
   ])
   cleanup()

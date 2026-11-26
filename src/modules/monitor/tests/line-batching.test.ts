@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest"
 import { LineBatch } from "#monitor/modules/monitor/internal"
 
 function waitForQuietGap(): void {
-  const batch = new LineBatch()
+  const batch = new LineBatch(50)
 
   batch.add("a", 1000)
   batch.add("b", 1100)
@@ -10,7 +10,7 @@ function waitForQuietGap(): void {
 }
 
 function capWaitFromFirstLine(): void {
-  const batch = new LineBatch()
+  const batch = new LineBatch(50)
 
   for (let at = 1000; at <= 1900; at += 100) {
     batch.add("x", at)
@@ -19,7 +19,7 @@ function capWaitFromFirstLine(): void {
 }
 
 function keepMostRecentLines(): void {
-  const batch = new LineBatch()
+  const batch = new LineBatch(50)
 
   for (let index = 1; index <= 60; index += 1) {
     batch.add(`line ${index}`, 1000)
@@ -31,7 +31,7 @@ function keepMostRecentLines(): void {
 }
 
 function emptyAfterTake(): void {
-  const batch = new LineBatch()
+  const batch = new LineBatch(50)
 
   batch.add("a", 1000)
   batch.take()
@@ -40,7 +40,7 @@ function emptyAfterTake(): void {
 }
 
 function restartWaitAfterTake(): void {
-  const batch = new LineBatch()
+  const batch = new LineBatch(50)
 
   batch.add("a", 1000)
   batch.take()
