@@ -12,14 +12,12 @@ concurrency:
 jobs:
   check:
     uses: ./.github/workflows/ci.yml
-    secrets: inherit
 
   release:
     needs: check
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,7 +25,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          registry-url: https://registry.npmjs.org
           cache: npm
       - run: npm install --global npm@11
       - run: npm ci
@@ -53,7 +50,16 @@ jobs:
       - if: steps.next.outputs.release == 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::O segredo NPM_TOKEN não está configurado."
+            exit 1
+          fi
+          umask 077
+          export NPM_CONFIG_USERCONFIG="$(mktemp "$RUNNER_TEMP/npmrc.XXXXXX")"
+          trap 'rm -f "$NPM_CONFIG_USERCONFIG"' EXIT
+          printf '%s\n' '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}' > "$NPM_CONFIG_USERCONFIG"
+          npm publish --access public --registry https://registry.npmjs.org/
       - if: steps.next.outputs.release == 'true'
         run: git push origin HEAD:main "${{ steps.next.outputs.tag }}"
       - if: steps.next.outputs.release == 'true'
