@@ -9,3 +9,6 @@ export const KILL_DELAY_MS = 3000
 export const GONE_PROCESS_CODES: readonly string[] = ["ESRCH", "EPERM"]
 export const PROCESS_ERROR_TEXT = "[opencode-monitor] command process error:"
 export const LAUNCH_FAILURE_TEXT = "the command could not start: check the shell and the working directory"
+export const PS_PATH = "ps"
+export const PS_FORMAT = "pgid=,lstart="
+export const PROBE_SIGNAL = 0

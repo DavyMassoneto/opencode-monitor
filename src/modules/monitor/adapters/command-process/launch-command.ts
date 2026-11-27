@@ -12,6 +12,7 @@ import {
 } from "#monitor/modules/monitor/internal"
 import { COMMAND_STDIO, LAUNCH_FAILURE_TEXT, PROCESS_ERROR_TEXT, SHELL_COMMAND_FLAG, SHELL_PATH } from "./constants"
 import { ProcessGroup } from "./process-group"
+import { readProcessIdentity } from "./read-process-identity"
 import { type ExitCodeValue, type ExitSignalValue } from "./types"
 
 export function launchCommand(request: CommandRequest, handlers: CommandHandlers): CommandLaunch {
@@ -27,11 +28,11 @@ export function launchCommand(request: CommandRequest, handlers: CommandHandlers
   if (!pid || !stdout || !stderr) {
     return { kind: COMMAND_FAILED_KIND, reason: LAUNCH_FAILURE_TEXT }
   }
-  const group = new ProcessGroup(pid)
+  const group = new ProcessGroup(pid, readProcessIdentity(pid))
   createInterface({ input: stdout, crlfDelay: Number.POSITIVE_INFINITY }).on("line", handlers.onLine)
   createInterface({ input: stderr, crlfDelay: Number.POSITIVE_INFINITY }).on("line", handlers.onStderr)
   child.on("close", (code, signal) => {
-    group.markClosed()
+    group.release()
     handlers.onExit(exitOf(code, signal))
   })
   return { kind: COMMAND_LAUNCHED_KIND, pid, stop: () => group.stop() }

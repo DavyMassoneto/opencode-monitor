@@ -7,7 +7,9 @@ import {
   type EnvironmentVariables,
   MONITOR_STARTED_KIND,
   type MonitorRequest,
+  type MonitorSettings,
   type MonitorSummary,
+  type Notice,
 } from "#monitor/modules/monitor/public"
 import {
   GROUP_EXIT_TIMEOUT_MS,
@@ -15,16 +17,19 @@ import {
   SETTLE_MS,
   STDERR_ROOT_PREFIX,
   TEST_DESCRIPTION,
+  TEST_LABEL,
+  TEST_LIMITS,
   TEST_SESSION_ID,
   TEST_TIMEOUT_MS,
 } from "./constants"
-import { RecordingNoticeSink, SequentialNoticeIds } from "./doubles"
+import { RecordingLogger, RecordingNoticeSink, SequentialNoticeIds } from "./doubles"
 import { type MonitorTestSut } from "./types"
 
 export function makeMonitorSut(): MonitorTestSut {
   const sink = new RecordingNoticeSink()
   const stderrRoot = mkdtempSync(join(tmpdir(), STDERR_ROOT_PREFIX))
-  const monitors = createMonitors(sink, new SequentialNoticeIds().create, stderrRoot)
+  const logger = new RecordingLogger()
+  const monitors = createMonitors(sink, new SequentialNoticeIds().create, testSettings(stderrRoot, logger))
   const pids: number[] = []
 
   onTestFinished(async () => {
@@ -32,7 +37,7 @@ export function makeMonitorSut(): MonitorTestSut {
     await Promise.all(pids.map(waitForGroupExit))
     rmSync(stderrRoot, { recursive: true, force: true })
   })
-  return { monitors, sink, stderrRoot, pids }
+  return { monitors, sink, stderrRoot, pids, logger }
 }
 
 export function monitorRequest(command: string): MonitorRequest {
@@ -100,4 +105,29 @@ export function temporaryDirectory(prefix: string): string {
 
   onTestFinished(() => rmSync(directory, { recursive: true, force: true }))
   return directory
+}
+
+export function testNotice(id: string): Notice {
+  return {
+    sessionID: TEST_SESSION_ID,
+    mode: "wake",
+    id,
+    monitorId: "m_test",
+    sequence: 1,
+    label: TEST_LABEL,
+    text: "text",
+  }
+}
+
+export function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, PROBE_SIGNAL)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function testSettings(stderrRoot: string, logger: RecordingLogger): MonitorSettings {
+  return { stderrRoot, limits: TEST_LIMITS, logger }
 }

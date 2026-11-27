@@ -2,7 +2,6 @@ import {
   BELL_CODE,
   CSI_INTRODUCER_CODE,
   ESCAPE_CODE,
-  LINE_MAX_BYTES,
   OSC_INTRODUCER_CODE,
   OSC_STRING_TERMINATOR_LENGTH,
   TRAILING_REPLACEMENT_CHARACTERS,
@@ -10,8 +9,8 @@ import {
 } from "./constants"
 import { isFinalByte, isVisibleCode } from "./predicates"
 
-export function cleanLine(raw: string): string {
-  return truncateToLimit(stripTerminalCodes(raw))
+export function cleanLine(raw: string, maxBytes: number): string {
+  return truncateToLimit(stripTerminalCodes(raw), maxBytes)
 }
 
 function stripTerminalCodes(text: string): string {
@@ -69,11 +68,11 @@ function operatingCommandEnd(text: string, start: number): number {
   return index
 }
 
-function truncateToLimit(text: string): string {
-  if (Buffer.byteLength(text) <= LINE_MAX_BYTES) {
+function truncateToLimit(text: string, maxBytes: number): string {
+  if (Buffer.byteLength(text) <= maxBytes) {
     return text
   }
-  const room = LINE_MAX_BYTES - Buffer.byteLength(TRUNCATION_MARK)
+  const room = maxBytes - Buffer.byteLength(TRUNCATION_MARK)
   const kept = Buffer.from(text).subarray(0, room).toString()
 
   return `${kept.replace(TRAILING_REPLACEMENT_CHARACTERS, "")}${TRUNCATION_MARK}`

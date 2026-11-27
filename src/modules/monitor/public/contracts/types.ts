@@ -131,3 +131,24 @@ export interface Monitors {
   stopSession(sessionID: string): void
   stopAll(): void
 }
+
+export interface MonitorLimits {
+  maxMonitorsPerSession: number
+  lineMaxBytes: number
+  batchMaxLines: number
+  pendingMaxLines: number
+  floodLinesPerSecond: number
+  floodSeconds: number
+  stderrMaxBytes: number
+  retentionMs: number
+}
+
+export interface MonitorLogger {
+  debug(message: string): void
+}
+
+export interface MonitorSettings {
+  stderrRoot: string
+  limits: MonitorLimits
+  logger: MonitorLogger
+}

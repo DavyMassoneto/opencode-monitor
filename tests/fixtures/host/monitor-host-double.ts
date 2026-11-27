@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto"
 import { AssertInput } from "@opencode/plugin/permission"
 import { Schema } from "effect"
 import {
+  type HostOptions,
   type MonitorHost,
   type MonitorLocationHost,
   type MonitorPermissionHost,
@@ -17,6 +18,7 @@ import { SessionEventsDouble } from "./session-events-double"
 import { ToolEditorDouble } from "./tool-editor-double"
 
 export class MonitorHostDouble implements MonitorHost {
+  readonly options: HostOptions = {}
   readonly sessionID = `${HOST_SESSION_PREFIX}${randomUUID().replaceAll("-", "")}`
   readonly editor = new ToolEditorDouble()
   readonly permissionRequests: PermissionRequest[] = []

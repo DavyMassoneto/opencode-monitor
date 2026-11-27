@@ -77,6 +77,7 @@ export interface MonitorEventHost {
 }
 
 export interface MonitorHost {
+  options: Plugin.Context["options"]
   tool: MonitorToolHost
   permission: MonitorPermissionHost
   session: MonitorSessionHost

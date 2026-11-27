@@ -1,5 +1,6 @@
 export * from "./command-splitting"
 export * from "./constants"
+export * from "./plugin-options"
 export * from "./register-tools"
 export * from "./schemas"
 export * from "./synthetic-notice-sink"

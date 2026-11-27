@@ -1,9 +1,16 @@
-import { FLOOD_LINES_PER_SECOND, FLOOD_SECONDS, MS_PER_SECOND } from "./constants"
+import { MS_PER_SECOND } from "./constants"
 
 export class FloodMeter {
+  private readonly linesPerSecond: number
+  private readonly seconds: number
   private second = Number.NEGATIVE_INFINITY
   private count = 0
   private floodedSeconds = 0
+
+  constructor(linesPerSecond: number, seconds: number) {
+    this.linesPerSecond = linesPerSecond
+    this.seconds = seconds
+  }
 
   record(now: number): boolean {
     const second = Math.floor(now / MS_PER_SECOND)
@@ -12,11 +19,11 @@ export class FloodMeter {
       this.advance(second)
     }
     this.count += 1
-    return this.count > FLOOD_LINES_PER_SECOND && this.floodedSeconds >= FLOOD_SECONDS - 1
+    return this.count > this.linesPerSecond && this.floodedSeconds >= this.seconds - 1
   }
 
   private advance(second: number): void {
-    const continuesFlood = second === this.second + 1 && this.count > FLOOD_LINES_PER_SECOND
+    const continuesFlood = second === this.second + 1 && this.count > this.linesPerSecond
 
     if (continuesFlood) {
       this.floodedSeconds += 1

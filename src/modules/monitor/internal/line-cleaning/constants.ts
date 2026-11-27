@@ -10,6 +10,5 @@ export const LAST_C1_CODE = 0x9f
 export const FIRST_FINAL_BYTE_CODE = 0x40
 export const LAST_FINAL_BYTE_CODE = 0x7e
 export const OSC_STRING_TERMINATOR_LENGTH = 2
-export const LINE_MAX_BYTES = 4096
 export const TRUNCATION_MARK = "…"
 export const TRAILING_REPLACEMENT_CHARACTERS = /\uFFFD+$/

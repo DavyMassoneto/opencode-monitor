@@ -1,4 +1,6 @@
 import {
+  type MonitorLimits,
+  type MonitorLogger,
   type MonitorRequest,
   type MonitorStatus,
   type NoticeIdFactory,
@@ -14,6 +16,8 @@ export interface RegistryDependencies {
   createNoticeId: NoticeIdFactory
   launch: CommandLauncher
   stderr: StderrStore
+  limits: MonitorLimits
+  logger: MonitorLogger
 }
 
 export type MonitorEnding = "running" | "flooded" | "expired"

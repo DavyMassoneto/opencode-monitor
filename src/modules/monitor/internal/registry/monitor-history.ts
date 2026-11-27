@@ -27,6 +27,10 @@ export class MonitorHistory {
     return []
   }
 
+  all(): FinishedMonitor[] {
+    return Array.from(this.sessions.values()).flat()
+  }
+
   forget(sessionID: string): void {
     this.sessions.delete(sessionID)
   }

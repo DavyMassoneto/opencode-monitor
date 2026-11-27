@@ -1,3 +1,5 @@
+import { type MonitorLimits } from "#monitor/modules/monitor/public"
+
 export const TEST_SESSION_ID = "ses_monitor_test"
 export const TEST_DESCRIPTION = "test output"
 export const TEST_LABEL = "monitor: test output"
@@ -17,3 +19,13 @@ export const HISTORY_LIMIT = 20
 export const GROUP_EXIT_TIMEOUT_MS = 5000
 export const STDERR_ROOT_PREFIX = "monitor-stderr-"
 export const TEST_ENV_NAME = "MONITOR_TEST_VALUE"
+export const TEST_LIMITS: MonitorLimits = {
+  maxMonitorsPerSession: 10,
+  lineMaxBytes: 4096,
+  batchMaxLines: 50,
+  pendingMaxLines: 1000,
+  floodLinesPerSecond: 100,
+  floodSeconds: 5,
+  stderrMaxBytes: 5_242_880,
+  retentionMs: 604_800_000,
+}

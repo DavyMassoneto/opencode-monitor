@@ -20,11 +20,14 @@ import { DeadlineTimer } from "../deadline"
 import { NoticeChannel } from "../notice"
 import { STDERR_LOG_FAILED_KIND, type StderrLog } from "../stderr-port"
 import {
+  ENDED_LOG,
   ENDING_EXPIRED,
   ENDING_FLOODED,
   ENDING_RUNNING,
-  MAX_MONITORS_PER_SESSION,
-  SESSION_LIMIT_TEXT,
+  SESSION_LIMIT_CLOSING,
+  SESSION_LIMIT_OPENING,
+  STARTED_LOG,
+  STOPPED_LOG,
 } from "./constants"
 import { endingNotice } from "./ending-notice"
 import { MonitorHistory } from "./monitor-history"
@@ -44,8 +47,13 @@ export class MonitorRegistry implements Monitors {
   }
 
   start(request: MonitorRequest): MonitorStart {
-    if (this.runningIn(request.sessionID).length >= MAX_MONITORS_PER_SESSION) {
-      return { kind: MONITOR_FAILED_KIND, reason: SESSION_LIMIT_TEXT }
+    const { maxMonitorsPerSession } = this.dependencies.limits
+
+    if (this.runningIn(request.sessionID).length >= maxMonitorsPerSession) {
+      return {
+        kind: MONITOR_FAILED_KIND,
+        reason: `${SESSION_LIMIT_OPENING}${maxMonitorsPerSession}${SESSION_LIMIT_CLOSING}`,
+      }
     }
     return this.launch(request)
   }
@@ -61,6 +69,7 @@ export class MonitorRegistry implements Monitors {
       return { kind: MONITOR_NOT_FOUND_KIND, id }
     }
     this.halt(monitor)
+    this.dependencies.logger.debug(`${id} ${STOPPED_LOG}`)
     return { kind: MONITOR_STOPPED_KIND, summary: this.retire(monitor, STATUS_STOPPED) }
   }
 
@@ -82,6 +91,9 @@ export class MonitorRegistry implements Monitors {
     for (const monitor of this.runningIn(sessionID)) {
       this.halt(monitor)
     }
+    for (const finished of this.history.list(sessionID)) {
+      finished.monitor.channel.close()
+    }
     this.history.forget(sessionID)
     this.dependencies.stderr.removeSession(sessionID)
   }
@@ -89,6 +101,9 @@ export class MonitorRegistry implements Monitors {
   stopAll(): void {
     for (const monitor of this.running.values()) {
       this.halt(monitor)
+    }
+    for (const finished of this.history.all()) {
+      finished.monitor.channel.close()
     }
     this.history.clear()
     this.dependencies.stderr.removeAll()
@@ -120,6 +135,8 @@ export class MonitorRegistry implements Monitors {
       request,
       monitorId: id,
       log,
+      limits: this.dependencies.limits,
+      logger: this.dependencies.logger,
       onFlood: () => this.endEarly(id, ENDING_FLOODED),
     })
     const command = launch(
@@ -146,6 +163,7 @@ export class MonitorRegistry implements Monitors {
     }
     this.arm(monitor)
     this.running.set(id, monitor)
+    this.dependencies.logger.debug(`${id} ${STARTED_LOG}${request.command}`)
     return { kind: MONITOR_STARTED_KIND, summary: summarizeRunning(monitor) }
   }
 
@@ -186,11 +204,12 @@ export class MonitorRegistry implements Monitors {
     const monitor = this.running.get(id)
 
     if (monitor) {
-      const notice = endingNotice(monitor, exit)
+      const notice = endingNotice(monitor, exit, this.dependencies.limits)
       monitor.deadline?.cancel()
       this.running.delete(id)
       monitor.channel.end(notice.text, notice.labelSuffix)
       this.retire(monitor, notice.status)
+      this.dependencies.logger.debug(`${id} ${ENDED_LOG}${notice.status}`)
     }
   }
 }

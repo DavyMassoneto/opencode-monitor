@@ -1,9 +1,9 @@
 export const MONITOR_ID_PREFIX = "m_"
 export const MONITOR_ID_BYTES = 4
 export const MONITOR_ID_ENCODING = "hex"
-export const MAX_MONITORS_PER_SESSION = 10
 export const HISTORY_PER_SESSION = 20
-export const SESSION_LIMIT_TEXT = `this session already has ${MAX_MONITORS_PER_SESSION} running monitors: stop one with monitor_stop before starting another`
+export const SESSION_LIMIT_OPENING = "this session already has "
+export const SESSION_LIMIT_CLOSING = " running monitors: stop one with monitor_stop before starting another"
 export const ENDING_RUNNING = "running"
 export const ENDING_FLOODED = "flooded"
 export const ENDING_EXPIRED = "expired"
@@ -15,5 +15,10 @@ export const EXIT_LINES_CLOSING = " lines"
 export const LAST_LINE_OPENING = "; last line: "
 export const EXPIRED_OPENING = "monitor expired after "
 export const EXPIRED_CLOSING = " ms and its command was stopped: start it again with monitor_start if you still need it"
-export const FLOODED_TEXT =
-  "monitor stopped: the command printed more than 100 lines per second for 5 seconds. Start it again with a stricter filter, such as grep --line-buffered with the states you need."
+export const FLOODED_OPENING = "monitor stopped: the command printed more than "
+export const FLOODED_MIDDLE = " lines per second for "
+export const FLOODED_CLOSING =
+  " seconds. Start it again with a stricter filter, such as grep --line-buffered with the states you need."
+export const STARTED_LOG = "started: "
+export const ENDED_LOG = "ended: "
+export const STOPPED_LOG = "stopped by monitor_stop"

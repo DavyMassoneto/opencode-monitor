@@ -3,8 +3,16 @@ import { dirname, join } from "node:path"
 import { describe, expect, test, vi } from "vitest"
 import { createMonitors } from "#monitor/modules/monitor/public"
 import { OTHER_SESSION_ID, STDERR_ROOT_PREFIX, TEST_ENV_NAME, TEST_LABEL, TEST_SESSION_ID } from "./constants"
-import { RecordingNoticeSink, SequentialNoticeIds } from "./doubles"
-import { makeMonitorSut, monitorRequest, settle, singleVariable, startedMonitor, temporaryDirectory } from "./support"
+import { RecordingLogger, RecordingNoticeSink, SequentialNoticeIds } from "./doubles"
+import {
+  makeMonitorSut,
+  monitorRequest,
+  settle,
+  singleVariable,
+  startedMonitor,
+  temporaryDirectory,
+  testSettings,
+} from "./support"
 
 async function writeCleanedStderr(): Promise<void> {
   const sut = makeMonitorSut()
@@ -90,7 +98,7 @@ function pruneExpiredSessions(): void {
   }
   utimesSync(join(root, "ses_old"), eightDaysAgo, eightDaysAgo)
   utimesSync(join(root, "notes"), eightDaysAgo, eightDaysAgo)
-  createMonitors(new RecordingNoticeSink(), new SequentialNoticeIds().create, root)
+  createMonitors(new RecordingNoticeSink(), new SequentialNoticeIds().create, testSettings(root, new RecordingLogger()))
   expect(existsSync(join(root, "ses_old"))).toBe(false)
   expect(existsSync(join(root, "ses_recent"))).toBe(true)
   expect(existsSync(join(root, "notes"))).toBe(true)

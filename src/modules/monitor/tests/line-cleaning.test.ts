@@ -2,31 +2,31 @@ import { describe, expect, test } from "vitest"
 import { cleanLine } from "#monitor/modules/monitor/internal"
 
 function keepPlainText(): void {
-  expect(cleanLine("ERROR db timeout\tafter 30s")).toBe("ERROR db timeout\tafter 30s")
+  expect(cleanLine("ERROR db timeout\tafter 30s", 4096)).toBe("ERROR db timeout\tafter 30s")
 }
 
 function stripColorSequences(): void {
-  expect(cleanLine("\u001b[1;31mFAILED\u001b[0m build")).toBe("FAILED build")
+  expect(cleanLine("\u001b[1;31mFAILED\u001b[0m build", 4096)).toBe("FAILED build")
 }
 
 function stripTitleSequences(): void {
-  expect(cleanLine("\u001b]0;window title\u0007ready")).toBe("ready")
-  expect(cleanLine("\u001b]8;;https://x.test\u001b\\link")).toBe("link")
+  expect(cleanLine("\u001b]0;window title\u0007ready", 4096)).toBe("ready")
+  expect(cleanLine("\u001b]8;;https://x.test\u001b\\link", 4096)).toBe("link")
 }
 
 function stripControlCharacters(): void {
-  expect(cleanLine("a\u0000b\u0008c\rd\u007fe\u009bf")).toBe("abcdef")
+  expect(cleanLine("a\u0000b\u0008c\rd\u007fe\u009bf", 4096)).toBe("abcdef")
 }
 
 function truncateLongLine(): void {
-  const cleaned = cleanLine("x".repeat(10_000))
+  const cleaned = cleanLine("x".repeat(10_000), 4096)
 
   expect(Buffer.byteLength(cleaned)).toBeLessThanOrEqual(4096)
   expect(cleaned.endsWith("…")).toBe(true)
 }
 
 function keepMultibyteCharactersWhole(): void {
-  const cleaned = cleanLine("é".repeat(3000))
+  const cleaned = cleanLine("é".repeat(3000), 4096)
 
   expect(cleaned).not.toContain("\uFFFD")
   expect(cleaned.replace("…", "")).toMatch(/^é+$/)
@@ -35,7 +35,7 @@ function keepMultibyteCharactersWhole(): void {
 function keepLineAtLimit(): void {
   const atLimit = "y".repeat(4096)
 
-  expect(cleanLine(atLimit)).toBe(atLimit)
+  expect(cleanLine(atLimit, 4096)).toBe(atLimit)
 }
 
 function registerTests(): void {

@@ -1,16 +1,18 @@
 import { createWriteStream, openSync, renameSync, type WriteStream } from "node:fs"
 import { type StderrLog } from "#monitor/modules/monitor/internal"
-import { APPEND_FLAG, LINE_BREAK, ROTATED_SUFFIX, STDERR_MAX_BYTES, STDERR_WRITE_FAILURE_TEXT } from "./constants"
+import { APPEND_FLAG, LINE_BREAK, ROTATED_SUFFIX, STDERR_WRITE_FAILURE_TEXT } from "./constants"
 import { readTail } from "./read-tail"
 
 export class StderrLogFile implements StderrLog {
   readonly path: string
+  private readonly maxBytes: number
   private stream: WriteStream
   private bytes = 0
   private closed = false
 
-  constructor(path: string) {
+  constructor(path: string, maxBytes: number) {
     this.path = path
+    this.maxBytes = maxBytes
     this.stream = this.openStream()
   }
 
@@ -19,7 +21,7 @@ export class StderrLogFile implements StderrLog {
     const size = Buffer.byteLength(entry)
 
     if (!this.closed) {
-      if (this.bytes + size > STDERR_MAX_BYTES) {
+      if (this.bytes + size > this.maxBytes) {
         this.rotate()
       }
       this.stream.write(entry)
@@ -37,8 +39,10 @@ export class StderrLogFile implements StderrLog {
   }
 
   close(): void {
-    this.closed = true
-    this.stream.end()
+    if (!this.closed) {
+      this.closed = true
+      this.stream.end()
+    }
   }
 
   private rotate(): void {

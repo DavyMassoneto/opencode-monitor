@@ -1,4 +1,10 @@
-import { type MonitorRequest, type NoticeIdFactory, type NoticeSink } from "#monitor/modules/monitor/public/contracts"
+import {
+  type MonitorLimits,
+  type MonitorLogger,
+  type MonitorRequest,
+  type NoticeIdFactory,
+  type NoticeSink,
+} from "#monitor/modules/monitor/public/contracts"
 import { type StderrLog } from "../stderr-port"
 
 export interface NoticeHeader {
@@ -15,6 +21,8 @@ export interface ChannelSetup {
   request: MonitorRequest
   monitorId: string
   log: StderrLog
+  limits: MonitorLimits
+  logger: MonitorLogger
   onFlood: FloodHandler
 }
 

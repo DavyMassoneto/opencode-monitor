@@ -11,3 +11,5 @@ export const EXIT_SIGNAL_TEXT = "command stopped by signal "
 export const XML_SPECIAL_CHARACTERS = /[&<>"']/g
 export const STDERR_PREFIX = "stderr: "
 export const NO_PREFIX = ""
+export const DELIVERY_FAILED_LOG = "delivery attempt failed for "
+export const DELIVERY_GAVE_UP_LOG = "delivery gave up after retries: "

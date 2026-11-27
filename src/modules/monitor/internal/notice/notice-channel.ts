@@ -7,10 +7,13 @@ import {
   type Notice,
 } from "#monitor/modules/monitor/public/contracts"
 import { FloodMeter } from "../flood-detection"
-import { BATCH_MAX_LINES, type BatchContent, LineBatch, PENDING_MAX_LINES } from "../line-batching"
+import { type BatchContent, LineBatch } from "../line-batching"
 import { cleanLine } from "../line-cleaning"
+import { DELIVERED_KIND, type DeliveryResult, GAVE_UP_KIND, NoticeDelivery } from "../notice-delivery"
 import { redactSecrets } from "../secret-redaction"
 import {
+  DELIVERY_FAILED_LOG,
+  DELIVERY_GAVE_UP_LOG,
   NO_PREFIX,
   NOTICE_LABEL_PREFIX,
   NOTICE_LINE_COUNT_CLOSING,
@@ -24,7 +27,8 @@ export class NoticeChannel {
   private readonly setup: ChannelSetup
   private readonly manual: boolean
   private readonly batch: LineBatch
-  private readonly flood = new FloodMeter()
+  private readonly flood: FloodMeter
+  private readonly sender: NoticeDelivery
   private sequence = 0
   private pending: Promise<void> = Promise.resolve()
   private delivering = false
@@ -38,8 +42,10 @@ export class NoticeChannel {
 
   constructor(setup: ChannelSetup) {
     this.setup = setup
+    this.sender = new NoticeDelivery(setup.sink)
     this.manual = setup.request.mode === MODE_MANUAL
-    this.batch = new LineBatch(this.manual ? PENDING_MAX_LINES : BATCH_MAX_LINES)
+    this.batch = new LineBatch(this.manual ? setup.limits.pendingMaxLines : setup.limits.batchMaxLines)
+    this.flood = new FloodMeter(setup.limits.floodLinesPerSecond, setup.limits.floodSeconds)
   }
 
   get delivery(): DeliveryState {
@@ -60,11 +66,11 @@ export class NoticeChannel {
   }
 
   receiveLine(raw: string): void {
-    this.accept(cleanLine(raw), NO_PREFIX)
+    this.accept(cleanLine(raw, this.setup.limits.lineMaxBytes), NO_PREFIX)
   }
 
   receiveStderr(raw: string): void {
-    const line = cleanLine(raw)
+    const line = cleanLine(raw, this.setup.limits.lineMaxBytes)
 
     this.setup.log.append(redactSecrets(line))
     if (this.setup.request.captureStderr) {
@@ -109,6 +115,7 @@ export class NoticeChannel {
     this.accepting = false
     this.silenced = true
     this.cancelTimer()
+    this.sender.cancel()
     this.setup.log.close()
   }
 
@@ -161,14 +168,23 @@ export class NoticeChannel {
       const notice = this.notice(lines, omitted, label)
       this.delivering = true
       this.pending = this.pending
-        .then(() => this.setup.sink.deliver(notice))
-        .then(() => {
-          this.counts.delivered += outputLines
-        })
-        .catch((error: Error) => {
-          this.state = { kind: DELIVERY_FAILED_KIND, noticeId: notice.id, reason: error.message }
-        })
+        .then(() => this.sender.send(notice, (reason) => this.markFailed(notice.id, reason)))
+        .then((result) => this.record(result, outputLines))
         .finally(() => this.afterDelivery())
+    }
+  }
+
+  private markFailed(noticeId: string, reason: string): void {
+    this.state = { kind: DELIVERY_FAILED_KIND, noticeId, reason }
+    this.setup.logger.debug(`${this.setup.monitorId} ${DELIVERY_FAILED_LOG}${noticeId}: ${reason}`)
+  }
+
+  private record(result: DeliveryResult, outputLines: number): void {
+    if (result.kind === DELIVERED_KIND) {
+      this.counts.delivered += outputLines
+      this.state = { kind: DELIVERY_HEALTHY_KIND }
+    } else if (result.kind === GAVE_UP_KIND) {
+      this.setup.logger.debug(`${this.setup.monitorId} ${DELIVERY_GAVE_UP_LOG}${result.reason}`)
     }
   }
 

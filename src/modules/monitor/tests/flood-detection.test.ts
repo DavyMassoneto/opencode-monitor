@@ -13,21 +13,21 @@ function recordSeconds(meter: FloodMeter, linesPerSecond: number, seconds: numbe
 }
 
 function floodAfterFiveSeconds(): void {
-  const verdicts = recordSeconds(new FloodMeter(), 101, 5)
+  const verdicts = recordSeconds(new FloodMeter(100, 5), 101, 5)
 
   expect(verdicts.indexOf(true)).toBe(101 * 5 - 1)
 }
 
 function acceptLimitRate(): void {
-  expect(recordSeconds(new FloodMeter(), 100, 30)).not.toContain(true)
+  expect(recordSeconds(new FloodMeter(100, 5), 100, 30)).not.toContain(true)
 }
 
 function acceptShortBurst(): void {
-  expect(recordSeconds(new FloodMeter(), 5000, 4)).not.toContain(true)
+  expect(recordSeconds(new FloodMeter(100, 5), 5000, 4)).not.toContain(true)
 }
 
 function resetAfterQuietSecond(): void {
-  const meter = new FloodMeter()
+  const meter = new FloodMeter(100, 5)
 
   recordSeconds(meter, 101, 4)
   meter.record(4500)
