@@ -240,16 +240,20 @@ Quando o comando não pode ser analisado (aspas sem fechamento, heredoc, parênt
 
 ## 10. Limites (todos configuráveis via `options` do plugin)
 
-| Limite | Padrão | Ao exceder |
-| --- | --- | --- |
-| Monitores ativos por sessão | 10 | `monitor_start` falha com erro claro. |
-| Tamanho de uma linha | 4 KB | Trunca com `…`. |
-| Linhas por lote | 50 | Envia as 50 mais recentes + "N linhas omitidas". |
-| Pendentes em memória por monitor | 1 000 linhas (anel) | Descarta as mais antigas, conta as descartadas. |
-| Inundação | > 100 linhas/s por 5 s seguidos | Para o monitor e envia aviso `flooded`. |
-| Arquivo de stderr | 5 MB | Rotaciona (mantém 1 anterior). |
-| Retenção de arquivos | 7 dias ou fim da sessão | Remove. |
-| Log de depuração | **desligado** | Liga por opção/variável de ambiente. |
+| Limite | Opção | Padrão | Ao exceder |
+| --- | --- | --- | --- |
+| Monitores ativos por sessão | `maxMonitorsPerSession` | 10 | `monitor_start` falha com erro claro. |
+| Tamanho de uma linha | `lineMaxBytes` (mínimo 16) | 4 KB | Trunca com `…`. |
+| Linhas por lote | `batchMaxLines` | 50 | Envia as 50 mais recentes + "N linhas omitidas". |
+| Pendentes em memória por monitor | `pendingMaxLines` | 1 000 linhas (anel) | Descarta as mais antigas, conta as descartadas. |
+| Inundação | `floodLinesPerSecond`, `floodSeconds` | > 100 linhas/s por 5 s seguidos | Para o monitor e envia aviso `flooded`. |
+| Arquivo de stderr | `stderrMaxBytes` | 5 MB | Rotaciona (mantém 1 anterior). |
+| Retenção de arquivos | `retentionDays` | 7 dias ou fim da sessão | Remove. |
+| Log de depuração | `debug` ou `OPENCODE_MONITOR_DEBUG=1` | **desligado** | Escreve em `<os.tmpdir()>/opencode-monitor/debug.log`, rotacionado acima de 1 MB. |
+
+As opções são validadas ao carregar o plugin: valor que não é inteiro positivo, ou chave desconhecida (como um erro de digitação), impede o carregamento com uma mensagem que nomeia a chave.
+
+Entregas que falham são reenviadas com o mesmo `id` (idempotente), até 6 tentativas, com espera de 500 ms dobrando a cada tentativa (máximo 30 s). Enquanto isso, o estado de entrega do monitor fica `failed` com o motivo; volta a `healthy` quando uma entrega dá certo.
 
 ## 11. Arquitetura
 
