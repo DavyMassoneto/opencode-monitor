@@ -31,3 +31,8 @@ export interface StartInput {
   env?: StartEnvironment
   capture_stderr?: boolean
 }
+
+export interface ScenarioInput {
+  command: string
+  pattern?: string
+}
