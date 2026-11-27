@@ -1,4 +1,5 @@
 export * from "./flaky-notice-sink"
+export * from "./foreign-identity-platform"
 export * from "./recording-logger"
 export * from "./recording-notice-sink"
 export * from "./sequential-notice-ids"

@@ -10,16 +10,22 @@ import {
   EXIT_CODE_KIND,
   EXIT_SIGNAL_KIND,
 } from "#monitor/modules/monitor/internal"
-import { COMMAND_STDIO, LAUNCH_FAILURE_TEXT, PROCESS_ERROR_TEXT, SHELL_COMMAND_FLAG, SHELL_PATH } from "./constants"
+import { type ProcessPlatform } from "../process-platform"
+import { COMMAND_STDIO, LAUNCH_FAILURE_TEXT, PROCESS_ERROR_TEXT } from "./constants"
 import { ProcessGroup } from "./process-group"
-import { readProcessIdentity } from "./read-process-identity"
 import { type ExitCodeValue, type ExitSignalValue } from "./types"
 
-export function launchCommand(request: CommandRequest, handlers: CommandHandlers): CommandLaunch {
-  const child = spawn(SHELL_PATH, [SHELL_COMMAND_FLAG, request.command], {
+export function launchWith(
+  platform: ProcessPlatform,
+  request: CommandRequest,
+  handlers: CommandHandlers,
+): CommandLaunch {
+  const shell = platform.shellInvocation(request.command)
+  const child = spawn(shell.file, shell.args, {
     cwd: request.directory,
     env: { ...process.env, ...Object.fromEntries(request.environment) },
-    detached: true,
+    detached: shell.detached,
+    windowsHide: true,
     stdio: COMMAND_STDIO,
   })
   child.on("error", (error) => console.error(PROCESS_ERROR_TEXT, error))
@@ -28,7 +34,7 @@ export function launchCommand(request: CommandRequest, handlers: CommandHandlers
   if (!pid || !stdout || !stderr) {
     return { kind: COMMAND_FAILED_KIND, reason: LAUNCH_FAILURE_TEXT }
   }
-  const group = new ProcessGroup(pid, readProcessIdentity(pid))
+  const group = new ProcessGroup(platform, pid)
   createInterface({ input: stdout, crlfDelay: Number.POSITIVE_INFINITY }).on("line", handlers.onLine)
   createInterface({ input: stderr, crlfDelay: Number.POSITIVE_INFINITY }).on("line", handlers.onStderr)
   child.on("close", (code, signal) => {

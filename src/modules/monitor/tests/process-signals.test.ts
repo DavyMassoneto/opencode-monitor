@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest"
-import { launchCommand } from "#monitor/modules/monitor/adapters"
+import { launchWith, PosixPlatform } from "#monitor/modules/monitor/adapters"
 import { LONG_RUNNING_GROUP } from "./constants"
 import { makeMonitorSut, monitorRequest, startedMonitor, waitForGroupExit } from "./support"
 
@@ -8,7 +8,8 @@ function processError(code: string): Error {
 }
 
 async function tolerateExitedGroup(): Promise<void> {
-  const launched = launchCommand(
+  const launched = launchWith(
+    new PosixPlatform(),
     { command: LONG_RUNNING_GROUP, directory: process.cwd(), environment: new Map<string, string>() },
     { onLine: () => {}, onStderr: () => {}, onExit: () => {} },
   )

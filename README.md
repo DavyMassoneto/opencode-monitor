@@ -7,7 +7,7 @@ matters, the agent receives a synthetic notice — not a user message — that w
 next model call. The design is in [docs/especificacao.md](docs/especificacao.md); the architecture in
 [docs/architecture.md](docs/architecture.md) and the project rules in [AGENTS.md](AGENTS.md).
 
-Requires OpenCode v2.4.1 or later, on macOS or Linux.
+Requires OpenCode v2.4.1 or later, on macOS, Linux or Windows.
 
 ## Install
 
@@ -49,6 +49,15 @@ monitor_start({
 })
 ```
 
+On Windows the command runs in PowerShell 7 (`pwsh.exe`), or Windows PowerShell when PowerShell 7 is missing:
+
+```js
+monitor_start({
+  command: "Get-Content -Wait app.log | Select-String -Pattern 'READY|ERROR'",
+  description: "errors in app.log",
+})
+```
+
 Use `grep --line-buffered` in pipes, otherwise lines are delayed or never arrive, and match both the success and the
 failure states, otherwise a failure passes silently.
 
@@ -56,11 +65,12 @@ failure states, otherwise a failure passes silently.
 
 - `monitor_start` asks for the `shell` permission before running anything, so your `allow`, `ask` and `deny` rules and
   saved approvals apply. Compound commands are split, and every subcommand is checked: a deny rule for `rm *` also
-  blocks `echo ok; rm -rf x` and `echo "$(rm -rf x)"`. Commands that cannot be analyzed (heredocs, `eval`, `sh -c`)
-  also need `external_directory` for `*`. A `cwd` outside the project asks for `external_directory`.
+  blocks `echo ok; rm -rf x` and `echo "$(rm -rf x)"`. Commands that cannot be analyzed (heredocs, `eval`, `sh -c`;
+  on Windows also script blocks, `Invoke-Expression`, `Start-Process` and `pwsh -Command`) also need
+  `external_directory` for `*`. A `cwd` outside the project asks for `external_directory`.
 - Output is untrusted: notices escape XML, strip terminal codes and control characters, redact obvious secrets
   (`sk-…`, `ghp_…`, `AKIA…`, `Bearer …`) and are marked `untrusted="true"`.
-- Processes run in their own process group and are stopped as a group. Before signalling, the plugin checks that the
+- Processes run in their own process group (on Windows, their process tree) and are stopped as a group. Before signalling, the plugin checks that the
   group leader is still the process it started. Nothing is left running after `monitor_stop`, the end of the monitor,
   the deletion of the session or the unloading of the plugin.
 - stderr goes to `<tmp>/opencode-monitor/<session>/<monitor>.stderr.log`, rotated at 5 MB, removed with the session and

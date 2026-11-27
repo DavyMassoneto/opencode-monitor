@@ -1,38 +1,38 @@
-import { KILL_DELAY_MS, KILL_SIGNAL, STOP_SIGNAL } from "./constants"
-import { hasGroupMembers } from "./predicates"
-import { readProcessIdentity } from "./read-process-identity"
-import { signalProcessGroup } from "./signal-process-group"
+import { KILL_STAGE, type ProcessPlatform, type StopStage, TERMINATE_STAGE } from "../process-platform"
+import { KILL_DELAY_MS } from "./constants"
 
 export class ProcessGroup {
+  private readonly platform: ProcessPlatform
   private readonly pid: number
   private readonly identity: string
   private killTimer?: NodeJS.Timeout
 
-  constructor(pid: number, identity: string) {
+  constructor(platform: ProcessPlatform, pid: number) {
+    this.platform = platform
     this.pid = pid
-    this.identity = identity
+    this.identity = platform.readIdentity(pid)
   }
 
   stop(): void {
     if (!this.killTimer) {
-      this.signal(STOP_SIGNAL)
-      this.killTimer = setTimeout(() => this.signal(KILL_SIGNAL), KILL_DELAY_MS)
+      this.stopIfOwned(TERMINATE_STAGE)
+      this.killTimer = setTimeout(() => this.stopIfOwned(KILL_STAGE), KILL_DELAY_MS)
     }
   }
 
   release(): void {
-    if (hasGroupMembers(this.pid)) {
+    if (this.platform.hasTreeMembers(this.pid, this.identity)) {
       this.stop()
     } else {
       clearTimeout(this.killTimer)
     }
   }
 
-  private signal(signal: NodeJS.Signals): void {
-    const current = readProcessIdentity(this.pid)
+  private stopIfOwned(stage: StopStage): void {
+    const current = this.platform.readIdentity(this.pid)
 
     if (!current || current === this.identity) {
-      signalProcessGroup(this.pid, signal)
+      this.platform.stopTree(this.pid, this.identity, stage)
     }
   }
 }

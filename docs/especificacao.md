@@ -116,7 +116,6 @@ Não repetir (bugs/falhas encontrados):
 - Fonte WebSocket (o Claude Code permite abrir um WebSocket e tratar cada mensagem como evento).
 
 ### 6.3 Fora do escopo
-- Windows nativo (foco macOS/Linux; grupos de processo POSIX).
 - Agendamento por relógio — já existe em `automation`.
 - Painel de observabilidade de sessões/custos.
 
@@ -214,6 +213,8 @@ await ctx.permission.assert({
 
 Erros de `assert` devem **propagar** (não virar texto de retorno), como a doc pede.
 Se `cwd` estiver fora do projeto, também verificar `external_directory`.
+
+No Windows, o comando roda no PowerShell e a separação usa as mesmas regras, mais estas: blocos de script (`{ }`), `&`/`.` seguidos de variável ou bloco, `Invoke-Expression`, `Start-Process`, `Invoke-Command`, jobs, `ForEach-Object`/`Where-Object`, controle de fluxo, continuação de linha com crase, `--%` e chamadas a `pwsh -Command`, `powershell -EncodedCommand` ou `cmd /c` tornam o comando não analisável.
 
 O scanner de shell do OpenCode, que separa comandos compostos, não é exposto aos plugins. Checar o comando inteiro como um recurso só deixaria `echo ok; rm -rf x` passar por uma regra `deny` para `rm *`. Por isso o plugin separa o comando antes de pedir permissão:
 

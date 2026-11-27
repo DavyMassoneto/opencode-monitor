@@ -1,5 +1,5 @@
-import { CommandScanner, OPAQUE_KIND } from "./command-splitting"
-import { ANY_DIRECTORY, EXTERNAL_DIRECTORY_PERMISSION, SHELL_PERMISSION } from "./constants"
+import { analyzePowershell, type CommandAnalysis, CommandScanner, OPAQUE_KIND } from "./command-splitting"
+import { ANY_DIRECTORY, EXTERNAL_DIRECTORY_PERMISSION, SHELL_PERMISSION, WINDOWS_PLATFORM } from "./constants"
 import { permissionRequest } from "./permission-request"
 import { type MonitorCallContext, type MonitorHost, type MonitorStartInput } from "./types"
 
@@ -8,7 +8,7 @@ export async function assertShellPermission(
   input: MonitorStartInput,
   context: MonitorCallContext,
 ): Promise<void> {
-  const analysis = new CommandScanner(input.command).analyze()
+  const analysis = analyzeCommand(input.command, process.platform)
 
   if (analysis.kind === OPAQUE_KIND) {
     const whole = { action: SHELL_PERMISSION, resources: [input.command], save: [] }
@@ -21,4 +21,11 @@ export async function assertShellPermission(
       permissionRequest(input, context, { action: SHELL_PERMISSION, resources, save: resources }),
     )
   }
+}
+
+export function analyzeCommand(command: string, platform: NodeJS.Platform): CommandAnalysis {
+  if (platform === WINDOWS_PLATFORM) {
+    return analyzePowershell(command)
+  }
+  return new CommandScanner(command).analyze()
 }

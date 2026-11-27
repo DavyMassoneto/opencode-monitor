@@ -1,3 +1,4 @@
+export * from "./assert-shell-permission"
 export * from "./command-splitting"
 export * from "./constants"
 export * from "./plugin-options"

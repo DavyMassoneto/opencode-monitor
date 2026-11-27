@@ -15,6 +15,7 @@ export const MONITOR_START_DESCRIPTION = [
 export const SHELL_PERMISSION = "shell"
 export const EXTERNAL_DIRECTORY_PERMISSION = "external_directory"
 export const ANY_DIRECTORY = "*"
+export const WINDOWS_PLATFORM = "win32"
 export const PARENT_SEGMENT = ".."
 export const MISSING_DIRECTORY_TEXT = "the working directory does not exist or is not a directory: "
 export const PERMISSION_SOURCE_TYPE = "tool"

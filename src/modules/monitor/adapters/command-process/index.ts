@@ -1,3 +1,2 @@
-export * from "./launch-command"
+export * from "./command-launcher"
 export * from "./process-group"
-export * from "./read-process-identity"

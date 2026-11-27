@@ -28,3 +28,5 @@ export const LEADING_PREFIX =
 export const CLOSING_KEYWORD = /^(?:fi|done|esac|\})$/
 export const DYNAMIC_COMMAND =
   /^(?:eval|source|\.)(?:\s|$)|^(?:\S*\/)?(?:sh|bash|zsh|dash|ksh)\s+(?:-\S+\s+)*-\w*c\w*(?:\s|$)/
+export const POWERSHELL_DYNAMIC_COMMAND =
+  /(?:^|[\s;|&({])(?:Invoke-Expression|iex|Invoke-Command|icm|Start-Job|Start-ThreadJob|Start-Process|saps|start|Add-Type|ForEach-Object|%|Where-Object|\?|foreach|while|for|switch|if|function|filter|try|trap|param|begin|process|end)(?=[\s({;]|$)|[&.]\s*[{$('"]|\{|`|--%|\$\{|\[scriptblock\]|::Create|\.Invoke\(|pwsh(?:\.exe)?\s+.*-(?:c|command|e|enc|encodedcommand)\b|powershell(?:\.exe)?\s+.*-(?:c|command|e|enc|encodedcommand)\b|cmd(?:\.exe)?\s+\/c/i

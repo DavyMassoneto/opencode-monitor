@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from "vitest"
-import { launchCommand, ProcessGroup, readProcessIdentity } from "#monitor/modules/monitor/adapters"
+import { launchWith, PosixPlatform, ProcessGroup } from "#monitor/modules/monitor/adapters"
 import { TEST_SESSION_ID } from "./constants"
+import { ForeignIdentityPlatform } from "./doubles"
 import {
   isGroupAlive,
   isProcessAlive,
@@ -11,8 +12,11 @@ import {
   waitForGroupExit,
 } from "./support"
 
+const posix = new PosixPlatform()
+
 function launchedPid(command: string): number {
-  const launched = launchCommand(
+  const launched = launchWith(
+    posix,
     { command, directory: process.cwd(), environment: new Map<string, string>() },
     { onLine: () => {}, onStderr: () => {}, onExit: () => {} },
   )
@@ -33,17 +37,17 @@ async function stopCommandReplacedByExec(): Promise<void> {
 
 function readStableIdentity(): void {
   const pid = launchedPid("sleep 30")
-  const identity = readProcessIdentity(pid)
+  const identity = posix.readIdentity(pid)
 
   expect(identity).toMatch(new RegExp(`^${pid}\\s+\\S`))
-  expect(readProcessIdentity(pid)).toBe(identity)
+  expect(posix.readIdentity(pid)).toBe(identity)
   process.kill(-pid, "SIGKILL")
 }
 
 async function spareGroupWithAnotherIdentity(): Promise<void> {
   const pid = launchedPid("sleep 30")
 
-  new ProcessGroup(pid, `${pid} Mon Jan  1 00:00:00 2001`).stop()
+  new ProcessGroup(new ForeignIdentityPlatform(), pid).stop()
   await settle()
   expect(isGroupAlive(pid)).toBe(true)
   process.kill(-pid, "SIGKILL")
@@ -61,7 +65,7 @@ async function stopLeftoversWhenCommandExits(): Promise<void> {
 }
 
 function readNothingForMissingProcess(): void {
-  expect(readProcessIdentity(999_999)).toBe("")
+  expect(posix.readIdentity(999_999)).toBe("")
 }
 
 function registerTests(): void {

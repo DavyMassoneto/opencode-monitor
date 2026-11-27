@@ -67,10 +67,19 @@ flowchart TD
 
 ## Suporte por sistema operacional
 
-O plugin roda em macOS e Linux: os comandos rodam em `/bin/sh` e são parados pelo grupo de processos POSIX. Windows nativo está fora do escopo, conforme a especificação.
+O plugin roda em macOS, Linux e Windows. A diferença entre os sistemas fica em `src/modules/monitor/adapters/process-platform/`, atrás da porta `ProcessPlatform`:
+
+| | macOS e Linux | Windows |
+| --- | --- | --- |
+| Shell | `/bin/sh -c`, em grupo de processos próprio | PowerShell 7 (`pwsh.exe`) ou, na falta dele, Windows PowerShell (`powershell.exe`), com saída em UTF-8 |
+| Identidade do processo | grupo e horário de início, por `ps` | horário de início, por `Get-CimInstance Win32_Process` |
+| Parada | `SIGTERM` no grupo e `SIGKILL` após 3 s | `taskkill /T /F` no líder e nos descendentes criados depois dele, inclusive os que ficaram sem pai |
+| Separação para permissão | sintaxe POSIX | sintaxe POSIX mais as construções do PowerShell que escondem comandos |
+
+Sem PowerShell disponível no Windows, o plugin não carrega e diz o motivo.
 
 ## Testes
 
-- Os testes do módulo usam processos reais em `/bin/sh` e um substituto da porta `NoticeSink`.
+- Os testes do módulo usam processos reais em `/bin/sh` e um substituto da porta `NoticeSink`. No Windows, o comportamento da plataforma é validado com o pacote instalado em computadores Windows reais, porque o CI roda só em Ubuntu e macOS.
 - Os testes de integração montam o plugin pela composição contra um host substituto, que implementa só as partes do contexto que o plugin usa, e conferem a declaração do plugin pela entrada do pacote (`@davy121/opencode-monitor`).
 - A validação no OpenCode real (aviso que acorda a sessão, rótulo na conversa) é manual e segue os critérios de aceite da especificação.
