@@ -1,6 +1,6 @@
 {
   "name": "@davy121/opencode-monitor",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Monitor tool for OpenCode v2: watch a background command and wake the agent with a notification on each matching line",
   "keywords": [
     "opencode",
