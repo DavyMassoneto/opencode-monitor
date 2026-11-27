@@ -18,3 +18,4 @@ export const DEBUG_LOG_NAME = "debug.log"
 export const DEBUG_LOG_MAX_BYTES = 1_048_576
 export const DEBUG_ROTATED_SUFFIX = ".1"
 export const LOG_LINE_BREAK = "\n"
+export const DEBUG_WRITE_FAILURE_TEXT = "[opencode-monitor] debug log write failed:"

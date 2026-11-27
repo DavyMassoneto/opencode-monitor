@@ -1,7 +1,7 @@
-import { appendFileSync, existsSync, mkdirSync, renameSync, statSync } from "node:fs"
+import { appendFileSync, mkdirSync, renameSync, statSync } from "node:fs"
 import { dirname } from "node:path"
 import { type MonitorLogger } from "#monitor/modules"
-import { DEBUG_LOG_MAX_BYTES, DEBUG_ROTATED_SUFFIX, LOG_LINE_BREAK } from "./constants"
+import { DEBUG_LOG_MAX_BYTES, DEBUG_ROTATED_SUFFIX, DEBUG_WRITE_FAILURE_TEXT, LOG_LINE_BREAK } from "./constants"
 
 export class FileDebugLogger implements MonitorLogger {
   private readonly path: string
@@ -14,11 +14,20 @@ export class FileDebugLogger implements MonitorLogger {
 
   debug(message: string): void {
     if (this.enabled) {
-      mkdirSync(dirname(this.path), { recursive: true })
-      if (existsSync(this.path) && statSync(this.path).size > DEBUG_LOG_MAX_BYTES) {
-        renameSync(this.path, `${this.path}${DEBUG_ROTATED_SUFFIX}`)
+      try {
+        this.write(message)
+      } catch (error) {
+        console.error(DEBUG_WRITE_FAILURE_TEXT, error)
       }
-      appendFileSync(this.path, `${new Date().toISOString()} ${message}${LOG_LINE_BREAK}`)
     }
+  }
+
+  private write(message: string): void {
+    mkdirSync(dirname(this.path), { recursive: true })
+    const stats = statSync(this.path, { throwIfNoEntry: false })
+    if (stats && stats.size > DEBUG_LOG_MAX_BYTES) {
+      renameSync(this.path, `${this.path}${DEBUG_ROTATED_SUFFIX}`)
+    }
+    appendFileSync(this.path, `${new Date().toISOString()} ${message}${LOG_LINE_BREAK}`)
   }
 }

@@ -76,6 +76,14 @@ function rotateLargeDebugLog(): void {
   expect(readFileSync(join(root, "debug.log.1"), "utf8")).toHaveLength(1_048_577)
 }
 
+function keepWorkingWhenDebugLogFails(): void {
+  const root = temporaryDirectory("monitor-options-")
+  const blocked = join(root, "not-a-directory")
+
+  writeFileSync(blocked, "file")
+  expect(() => resolveSettings({ debug: true }, noEnvironment, blocked).logger.debug("lost")).not.toThrow()
+}
+
 async function refuseToLoadWithInvalidOptions(): Promise<void> {
   const host = Object.assign(new MonitorHostDouble(), { options: { maxMonitorsPerSession: "ten" } })
 
@@ -92,6 +100,7 @@ function registerTests(): void {
   test("escreve o log de depuração quando debug está ligado", writeDebugLogWhenEnabled)
   test("liga o log de depuração pela variável OPENCODE_MONITOR_DEBUG", enableDebugByEnvironment)
   test("rotaciona o log de depuração acima de 1 MB", rotateLargeDebugLog)
+  test("falha ao escrever o log de depuração não interrompe o monitor", keepWorkingWhenDebugLogFails)
   test("o plugin não carrega com opções inválidas", refuseToLoadWithInvalidOptions)
 }
 

@@ -55,7 +55,8 @@ export class StderrFiles implements StderrStore {
   prune(now: number): void {
     if (existsSync(this.root)) {
       for (const sessionID of readdirSync(this.root).filter(isSafeSessionId)) {
-        if (now - statSync(join(this.root, sessionID)).mtimeMs > this.retentionMs) {
+        const stats = statSync(join(this.root, sessionID), { throwIfNoEntry: false })
+        if (stats && now - stats.mtimeMs > this.retentionMs) {
           this.removeSession(sessionID)
         }
       }

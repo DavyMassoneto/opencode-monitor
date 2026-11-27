@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, statSync, utimesSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, statSync, symlinkSync, utimesSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { describe, expect, test, vi } from "vitest"
 import { createMonitors } from "#monitor/modules/monitor/public"
@@ -104,6 +104,19 @@ function pruneExpiredSessions(): void {
   expect(existsSync(join(root, "notes"))).toBe(true)
 }
 
+function pruneSessionRemovedMeanwhile(): void {
+  const root = temporaryDirectory(STDERR_ROOT_PREFIX)
+
+  symlinkSync(join(root, "removed-by-another-instance"), join(root, "ses_vanished"))
+  expect(() =>
+    createMonitors(
+      new RecordingNoticeSink(),
+      new SequentialNoticeIds().create,
+      testSettings(root, new RecordingLogger()),
+    ),
+  ).not.toThrow()
+}
+
 function rejectUnsafeSessionId(): void {
   const sut = makeMonitorSut()
 
@@ -133,6 +146,7 @@ function registerTests(): void {
   test("remove os arquivos da sessão apagada e mantém os das outras", removeDeletedSessionFiles)
   test("remove todos os arquivos criados quando o plugin é descarregado", removeAllFilesOnStopAll)
   test("apaga sessões com mais de 7 dias e preserva o resto", pruneExpiredSessions)
+  test("não falha ao limpar uma sessão que outra instância removeu no meio", pruneSessionRemovedMeanwhile)
   test("recusa session id que não serve como nome de pasta", rejectUnsafeSessionId)
   test("passa as variáveis de ambiente ao comando", passEnvironment)
 }
