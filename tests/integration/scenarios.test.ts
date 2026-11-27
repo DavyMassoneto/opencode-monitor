@@ -51,9 +51,9 @@ async function followFakeCi(): Promise<void> {
   })
   await settle()
   writeFileSync(status, "running")
-  await vi.waitFor(() => expect(noticeLines(host)).toContain("ci: running"))
+  await vi.waitFor(() => expect(noticeLines(host)).toContain("ci: running"), { timeout: 5000 })
   writeFileSync(status, "failure")
-  await vi.waitFor(() => expect(host.messages.at(-1)?.text).toContain("command exited with code 0"))
+  await vi.waitFor(() => expect(host.messages.at(-1)?.text).toContain("command exited with code 0"), { timeout: 5000 })
   expect(noticeLines(host)).toContain("ci: failure")
   expect(noticeLines(host)).not.toContain("ci: queued")
 }

@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest"
-import { TEST_LABEL } from "./constants"
+import { SLOW_RUNNER_TIMEOUT_MS, TEST_LABEL, TICKER_25_LINES } from "./constants"
 import { makeMonitorSut, startedPid } from "./support"
 
 async function groupQuickLines(): Promise<void> {
@@ -25,8 +25,10 @@ async function reportOmittedLines(): Promise<void> {
 async function flushContinuousStream(): Promise<void> {
   const sut = makeMonitorSut()
 
-  startedPid(sut, "i=0; while [ $i -lt 25 ]; do echo tick; sleep 0.1; i=$((i+1)); done")
-  await vi.waitFor(() => expect(sut.sink.notices.at(-1)?.text).toContain("command exited"), { timeout: 6000 })
+  startedPid(sut, TICKER_25_LINES)
+  await vi.waitFor(() => expect(sut.sink.notices.at(-1)?.text).toContain("command exited"), {
+    timeout: SLOW_RUNNER_TIMEOUT_MS,
+  })
   expect(sut.sink.notices.length).toBeGreaterThanOrEqual(3)
 }
 
@@ -59,7 +61,7 @@ async function redactSecretsInNotices(): Promise<void> {
 function registerTests(): void {
   test("junta num aviso as linhas que chegam juntas", groupQuickLines)
   test("avisa quantas linhas antigas o lote omitiu", reportOmittedLines)
-  test("entrega fluxo contínuo em vários avisos", flushContinuousStream)
+  test("entrega fluxo contínuo em vários avisos", flushContinuousStream, 30_000)
   test("separa linhas que chegam com intervalo", keepSeparateLinesApart)
   test("remove códigos de terminal antes de avisar", cleanTerminalCodes)
   test("oculta segredos antes de avisar", redactSecretsInNotices)

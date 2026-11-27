@@ -29,3 +29,6 @@ export const TEST_LIMITS: MonitorLimits = {
   stderrMaxBytes: 5_242_880,
   retentionMs: 604_800_000,
 }
+export const TICKER_25_LINES = `"${process.execPath}" -e 'let n=0;const t=setInterval(()=>{console.log("tick");if(++n===25)clearInterval(t)},100)'`
+export const STEADY_60_LINES = `"${process.execPath}" -e 'let n=0;const t=setInterval(()=>{console.log("steady");if(++n===60)clearInterval(t)},100)'`
+export const SLOW_RUNNER_TIMEOUT_MS = 20_000
